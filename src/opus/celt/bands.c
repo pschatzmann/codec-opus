@@ -1,11 +1,8 @@
-/* Copyright (c) 2007-2012 IETF Trust, CSIRO, Xiph.Org Foundation,
-                           Gregory Maxwell. All rights reserved.
+/* Copyright (c) 2007-2008 CSIRO
+   Copyright (c) 2007-2009 Xiph.Org Foundation
+   Copyright (c) 2008-2009 Gregory Maxwell
    Written by Jean-Marc Valin and Gregory Maxwell */
 /*
-
-   This file is extracted from RFC6716. Please see that RFC for additional
-   information.
-
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
@@ -16,11 +13,6 @@
    - Redistributions in binary form must reproduce the above copyright
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
-
-   - Neither the name of Internet Society, IETF or IETF Trust, nor the
-   names of specific contributors, may be used to endorse or promote
-   products derived from this software without specific prior written
-   permission.
 
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -119,7 +111,7 @@ void compute_band_energies(const CELTMode *m, const celt_sig *X, celt_ener *band
 }
 
 /* Normalise each band such that the energy is one. */
-void normalise_bands(const CELTMode *m, const celt_sig * restrict freq, celt_norm * restrict X, const celt_ener *bandE, int end, int C, int M)
+void normalise_bands(const CELTMode *m, const celt_sig * OPUS_RESTRICT freq, celt_norm * OPUS_RESTRICT X, const celt_ener *bandE, int end, int C, int M)
 {
    int i, c, N;
    const opus_int16 *eBands = m->eBands;
@@ -161,7 +153,7 @@ void compute_band_energies(const CELTMode *m, const celt_sig *X, celt_ener *band
 }
 
 /* Normalise each band such that the energy is one. */
-void normalise_bands(const CELTMode *m, const celt_sig * restrict freq, celt_norm * restrict X, const celt_ener *bandE, int end, int C, int M)
+void normalise_bands(const CELTMode *m, const celt_sig * OPUS_RESTRICT freq, celt_norm * OPUS_RESTRICT X, const celt_ener *bandE, int end, int C, int M)
 {
    int i, c, N;
    const opus_int16 *eBands = m->eBands;
@@ -180,15 +172,15 @@ void normalise_bands(const CELTMode *m, const celt_sig * restrict freq, celt_nor
 #endif /* FIXED_POINT */
 
 /* De-normalise the energy to produce the synthesis from the unit-energy bands */
-void denormalise_bands(const CELTMode *m, const celt_norm * restrict X, celt_sig * restrict freq, const celt_ener *bandE, int end, int C, int M)
+void denormalise_bands(const CELTMode *m, const celt_norm * OPUS_RESTRICT X, celt_sig * OPUS_RESTRICT freq, const celt_ener *bandE, int end, int C, int M)
 {
    int i, c, N;
    const opus_int16 *eBands = m->eBands;
    N = M*m->shortMdctSize;
    celt_assert2(C<=2, "denormalise_bands() not implemented for >2 channels");
    c=0; do {
-      celt_sig * restrict f;
-      const celt_norm * restrict x;
+      celt_sig * OPUS_RESTRICT f;
+      const celt_norm * OPUS_RESTRICT x;
       f = freq+c*N;
       x = X+c*N;
       for (i=0;i<end;i++)
@@ -220,6 +212,7 @@ void anti_collapse(const CELTMode *m, celt_norm *X_, unsigned char *collapse_mas
       int depth;
 #ifdef FIXED_POINT
       int shift;
+      opus_val32 thresh32;
 #endif
 
       N0 = m->eBands[i+1]-m->eBands[i];
@@ -227,7 +220,8 @@ void anti_collapse(const CELTMode *m, celt_norm *X_, unsigned char *collapse_mas
       depth = (1+pulses[i])/((m->eBands[i+1]-m->eBands[i])<<LM);
 
 #ifdef FIXED_POINT
-      thresh = MULT16_32_Q15(QCONST16(0.5f, 15), MIN32(32767,SHR32(celt_exp2(-SHL16(depth, 10-BITRES)),1) ));
+      thresh32 = SHR32(celt_exp2(-SHL16(depth, 10-BITRES)),1);
+      thresh = MULT16_32_Q15(QCONST16(0.5f, 15), MIN32(32767,thresh32));
       {
          opus_val32 t;
          t = N0<<LM;
@@ -256,13 +250,16 @@ void anti_collapse(const CELTMode *m, celt_norm *X_, unsigned char *collapse_mas
             prev2 = MAX16(prev2,prev2logE[m->nbEBands+i]);
          }
          Ediff = EXTEND32(logE[c*m->nbEBands+i])-EXTEND32(MIN16(prev1,prev2));
-         Ediff = MAX16(0, Ediff);
+         Ediff = MAX32(0, Ediff);
 
 #ifdef FIXED_POINT
          if (Ediff < 16384)
-            r = 2*MIN16(16383,SHR32(celt_exp2(-EXTRACT16(Ediff)),1));
-         else
+         {
+            opus_val32 r32 = SHR32(celt_exp2(-EXTRACT16(Ediff)),1);
+            r = 2*MIN16(16383,r32);
+         } else {
             r = 0;
+         }
          if (LM==3)
             r = MULT16_16_Q14(23170, MIN32(23169, r));
          r = SHR16(MIN16(thresh, r),1);
@@ -400,7 +397,7 @@ int spreading_decision(const CELTMode *m, celt_norm *X, int *average,
 {
    int i, c, N0;
    int sum = 0, nbBands=0;
-   const opus_int16 * restrict eBands = m->eBands;
+   const opus_int16 * OPUS_RESTRICT eBands = m->eBands;
    int decision;
    int hf_sum=0;
 
@@ -415,7 +412,7 @@ int spreading_decision(const CELTMode *m, celt_norm *X, int *average,
       {
          int j, N, tmp=0;
          int tcount[3] = {0,0,0};
-         celt_norm * restrict x = X+M*eBands[i]+c*N0;
+         celt_norm * OPUS_RESTRICT x = X+M*eBands[i]+c*N0;
          N = M*(eBands[i+1]-eBands[i]);
          if (N<=8)
             continue;
@@ -1178,8 +1175,8 @@ void quant_all_bands(int encode, const CELTMode *m, int start, int end,
 {
    int i;
    opus_int32 remaining_bits;
-   const opus_int16 * restrict eBands = m->eBands;
-   celt_norm * restrict norm, * restrict norm2;
+   const opus_int16 * OPUS_RESTRICT eBands = m->eBands;
+   celt_norm * OPUS_RESTRICT norm, * OPUS_RESTRICT norm2;
    VARDECL(celt_norm, _norm);
    VARDECL(celt_norm, lowband_scratch);
    int B;
@@ -1209,7 +1206,7 @@ void quant_all_bands(int encode, const CELTMode *m, int start, int end,
       int N;
       opus_int32 curr_balance;
       int effective_lowband=-1;
-      celt_norm * restrict X, * restrict Y;
+      celt_norm * OPUS_RESTRICT X, * OPUS_RESTRICT Y;
       int tf_change=0;
       unsigned x_cm;
       unsigned y_cm;
@@ -1275,8 +1272,9 @@ void quant_all_bands(int encode, const CELTMode *m, int start, int end,
 
          /* Switch off dual stereo to do intensity */
          dual_stereo = 0;
-         for (j=M*eBands[start];j<M*eBands[i];j++)
-            norm[j] = HALF32(norm[j]+norm2[j]);
+         if (resynth)
+            for (j=M*eBands[start];j<M*eBands[i];j++)
+               norm[j] = HALF32(norm[j]+norm2[j]);
       }
       if (dual_stereo)
       {

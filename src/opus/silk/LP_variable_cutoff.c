@@ -1,9 +1,5 @@
 /***********************************************************************
-Copyright (c) 2006-2012 IETF Trust and Skype Limited. All rights reserved.
-
-This file is extracted from RFC6716. Please see that RFC for additional
-information.
-
+Copyright (c) 2006-2011, Skype Limited. All rights reserved.
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions
 are met:
@@ -12,7 +8,7 @@ this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the
+- Neither the name of Internet Society, IETF or IETF Trust, nor the 
 names of specific contributors, may be used to endorse or promote
 products derived from this software without specific prior written
 permission.
@@ -77,14 +73,14 @@ static inline void silk_LP_interpolate_filter_taps(
                         silk_Transition_LP_B_Q28[ ind + 1 ][ nb ],
                         silk_Transition_LP_B_Q28[ ind + 1 ][ nb ] -
                         silk_Transition_LP_B_Q28[ ind     ][ nb ],
-                        fac_Q16 - ( 1 << 16 ) );
+                        fac_Q16 - ( (opus_int32)1 << 16 ) );
                 }
                 for( na = 0; na < TRANSITION_NA; na++ ) {
                     A_Q28[ na ] = silk_SMLAWB(
                         silk_Transition_LP_A_Q28[ ind + 1 ][ na ],
                         silk_Transition_LP_A_Q28[ ind + 1 ][ na ] -
                         silk_Transition_LP_A_Q28[ ind     ][ na ],
-                        fac_Q16 - ( 1 << 16 ) );
+                        fac_Q16 - ( (opus_int32)1 << 16 ) );
                 }
             }
         } else {

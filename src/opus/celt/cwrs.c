@@ -1,11 +1,8 @@
-/* Copyright (c) 2007-2012 IETF Trust, CSIRO, Xiph.Org Foundation,
-                           Timothy B. Terriberry. All rights reserved.
+/* Copyright (c) 2007-2008 CSIRO
+   Copyright (c) 2007-2009 Xiph.Org Foundation
+   Copyright (c) 2007-2009 Timothy B. Terriberry
    Written by Timothy B. Terriberry and Jean-Marc Valin */
 /*
-
-   This file is extracted from RFC6716. Please see that RFC for additional
-   information.
-
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
@@ -16,11 +13,6 @@
    - Redistributions in binary form must reproduce the above copyright
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
-
-   - Neither the name of Internet Society, IETF or IETF Trust, nor the
-   names of specific contributors, may be used to endorse or promote
-   products derived from this software without specific prior written
-   permission.
 
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -56,8 +48,9 @@ int log2_frac(opus_uint32 val, int frac)
   l=EC_ILOG(val);
   if(val&(val-1)){
     /*This is (val>>l-16), but guaranteed to round up, even if adding a bias
-       before the shift would cause overflow (e.g., for 0xFFFFxxxx).*/
-    if(l>16)val=(val>>(l-16))+(((val&((1<<(l-16))-1))+(1<<(l-16))-1)>>(l-16));
+       before the shift would cause overflow (e.g., for 0xFFFFxxxx).
+       Doesn't work for val=0, but that case fails the test above.*/
+    if(l>16)val=((val-1)>>(l-16))+1;
     else val<<=16-l;
     l=(l-1)<<frac;
     /*Note that we always need one iteration, since the rounding up above means

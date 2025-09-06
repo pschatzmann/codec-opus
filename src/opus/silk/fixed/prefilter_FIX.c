@@ -1,9 +1,5 @@
 /***********************************************************************
-Copyright (c) 2006-2012 IETF Trust and Skype Limited. All rights reserved.
-
-This file is extracted from RFC6716. Please see that RFC for additional
-information.
-
+Copyright (c) 2006-2011, Skype Limited. All rights reserved.
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions
 are met:
@@ -12,7 +8,7 @@ this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the
+- Neither the name of Internet Society, IETF or IETF Trust, nor the 
 names of specific contributors, may be used to endorse or promote
 products derived from this software without specific prior written
 permission.
@@ -120,7 +116,7 @@ void silk_prefilter_FIX(
         }
 
         /* Noise shape parameters */
-        HarmShapeGain_Q12 = silk_SMULWB( psEncCtrl->HarmShapeGain_Q14[ k ], 16384 - psEncCtrl->HarmBoost_Q14[ k ] );
+        HarmShapeGain_Q12 = silk_SMULWB( (opus_int32)psEncCtrl->HarmShapeGain_Q14[ k ], 16384 - psEncCtrl->HarmBoost_Q14[ k ] );
         silk_assert( HarmShapeGain_Q12 >= 0 );
         HarmShapeFIRPacked_Q12  =                          silk_RSHIFT( HarmShapeGain_Q12, 2 );
         HarmShapeFIRPacked_Q12 |= silk_LSHIFT( (opus_int32)silk_RSHIFT( HarmShapeGain_Q12, 1 ), 16 );
@@ -139,9 +135,9 @@ void silk_prefilter_FIX(
         tmp_32 = silk_SMULWB( tmp_32, -psEncCtrl->GainsPre_Q14[ k ] );                                                /* Q24 */
         tmp_32 = silk_RSHIFT_ROUND( tmp_32, 14 );                                                                     /* Q10 */
         B_Q10[ 1 ]= silk_SAT16( tmp_32 );
-        x_filt_Q12[ 0 ] = silk_SMLABB( silk_SMULBB( st_res_Q2[ 0 ], B_Q10[ 0 ] ), P->sHarmHP_Q2, B_Q10[ 1 ] );
+        x_filt_Q12[ 0 ] = silk_MLA( silk_MUL( st_res_Q2[ 0 ], B_Q10[ 0 ] ), P->sHarmHP_Q2, B_Q10[ 1 ] );
         for( j = 1; j < psEnc->sCmn.subfr_length; j++ ) {
-            x_filt_Q12[ j ] = silk_SMLABB( silk_SMULBB( st_res_Q2[ j ], B_Q10[ 0 ] ), st_res_Q2[ j - 1 ], B_Q10[ 1 ] );
+            x_filt_Q12[ j ] = silk_MLA( silk_MUL( st_res_Q2[ j ], B_Q10[ 0 ] ), st_res_Q2[ j - 1 ], B_Q10[ 1 ] );
         }
         P->sHarmHP_Q2 = st_res_Q2[ psEnc->sCmn.subfr_length - 1 ];
 

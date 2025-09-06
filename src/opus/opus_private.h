@@ -1,10 +1,6 @@
-/* Copyright (c) 2011-2012 IETF Trust, Xiph.Org Foundation. All rights reserved.
+/* Copyright (c) 2012 Xiph.Org Foundation
    Written by Jean-Marc Valin */
 /*
-
-   This file is extracted from RFC6716. Please see that RFC for additional
-   information.
-
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
@@ -15,11 +11,6 @@
    - Redistributions in binary form must reproduce the above copyright
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
-
-   - Neither the name of Internet Society, IETF or IETF Trust, nor the
-   names of specific contributors, may be used to endorse or promote
-   products derived from this software without specific prior written
-   permission.
 
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -80,15 +71,15 @@ struct OpusRepacketizer {
 
 int encode_size(int size, unsigned char *data);
 
-int opus_decode_native(OpusDecoder *st, const unsigned char *data, int len,
+int opus_decode_native(OpusDecoder *st, const unsigned char *data, opus_int32 len,
       opus_val16 *pcm, int frame_size, int decode_fec, int self_delimited, int *packet_offset);
 
 /* Make sure everything's aligned to sizeof(void *) bytes */
 static inline int align(int i)
 {
-    return (i+sizeof(void *)-1)&-sizeof(void *);
+    return (i+sizeof(void *)-1)&-((int)sizeof(void *));
 }
 
-int opus_repacketizer_out_range_impl(OpusRepacketizer *rp, int begin, int end, unsigned char *data, int maxlen, int self_delimited);
+opus_int32 opus_repacketizer_out_range_impl(OpusRepacketizer *rp, int begin, int end, unsigned char *data, opus_int32 maxlen, int self_delimited);
 
 #endif /* OPUS_PRIVATE_H */

@@ -1,10 +1,7 @@
-/* Copyright (c) 2007-2012 IETF Trust, CSIRO, Xiph.Org Foundation. All rights reserved.
+/* Copyright (c) 2007-2008 CSIRO
+   Copyright (c) 2007-2009 Xiph.Org Foundation
    Written by Jean-Marc Valin */
 /*
-
-   This file is extracted from RFC6716. Please see that RFC for additional
-   information.
-
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
@@ -15,11 +12,6 @@
    - Redistributions in binary form must reproduce the above copyright
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
-
-   - Neither the name of Internet Society, IETF or IETF Trust, nor the
-   names of specific contributors, may be used to endorse or promote
-   products derived from this software without specific prior written
-   permission.
 
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -154,11 +146,11 @@ static opus_val32 loss_distortion(const opus_val16 *eBands, opus_val16 *oldEBand
    c=0; do {
       for (i=start;i<end;i++)
       {
-         opus_val16 d = SHR16(SUB16(eBands[i+c*len], oldEBands[i+c*len]),2);
+         opus_val16 d = SUB16(SHR16(eBands[i+c*len], 3), SHR16(oldEBands[i+c*len], 3));
          dist = MAC16_16(dist, d,d);
       }
    } while (++c<C);
-   return MIN32(200,SHR32(dist,2*DB_SHIFT-4));
+   return MIN32(200,SHR32(dist,2*DB_SHIFT-6));
 }
 
 static int quant_coarse_energy_impl(const CELTMode *m, int start, int end,

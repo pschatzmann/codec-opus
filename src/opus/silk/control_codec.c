@@ -1,9 +1,5 @@
 /***********************************************************************
-Copyright (c) 2006-2012 IETF Trust and Skype Limited. All rights reserved.
-
-This file is extracted from RFC6716. Please see that RFC for additional
-information.
-
+Copyright (c) 2006-2011, Skype Limited. All rights reserved.
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions
 are met:
@@ -12,7 +8,7 @@ this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the
+- Neither the name of Internet Society, IETF or IETF Trust, nor the 
 names of specific contributors, may be used to endorse or promote
 products derived from this software without specific prior written
 permission.
@@ -407,7 +403,7 @@ static inline opus_int silk_setup_LBRR(
         if( TargetRate_bps > LBRR_rate_thres_bps ) {
             /* Set gain increase for coding LBRR excitation */
             psEncC->LBRR_enabled = 1;
-            psEncC->LBRR_GainIncreases = silk_max_int( 7 - silk_SMULWB( psEncC->PacketLoss_perc, SILK_FIX_CONST( 0.4, 16 ) ), 2 );
+            psEncC->LBRR_GainIncreases = silk_max_int( 7 - silk_SMULWB( (opus_int32)psEncC->PacketLoss_perc, SILK_FIX_CONST( 0.4, 16 ) ), 2 );
         }
     }
 

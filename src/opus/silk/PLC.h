@@ -1,9 +1,5 @@
 /***********************************************************************
-Copyright (c) 2006-2012 IETF Trust and Skype Limited. All rights reserved.
-
-This file is extracted from RFC6716. Please see that RFC for additional
-information.
-
+Copyright (c) 2006-2011, Skype Limited. All rights reserved.
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions
 are met:
@@ -12,7 +8,7 @@ this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the
+- Neither the name of Internet Society, IETF or IETF Trust, nor the 
 names of specific contributors, may be used to endorse or promote
 products derived from this software without specific prior written
 permission.
@@ -38,7 +34,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #define V_PITCH_GAIN_START_MIN_Q14      11469               /* 0.7 in Q14               */
 #define V_PITCH_GAIN_START_MAX_Q14      15565               /* 0.95 in Q14              */
 #define MAX_PITCH_LAG_MS                18
-#define SA_THRES_Q8                     50
 #define RAND_BUF_SIZE                   128
 #define RAND_BUF_MASK                   ( RAND_BUF_SIZE - 1 )
 #define LOG2_INV_LPC_GAIN_HIGH_THRES    3                   /* 2^3 = 8 dB LPC gain      */

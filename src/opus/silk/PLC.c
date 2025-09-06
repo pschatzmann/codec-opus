@@ -1,9 +1,5 @@
 /***********************************************************************
-Copyright (c) 2006-2012 IETF Trust and Skype Limited. All rights reserved.
-
-This file is extracted from RFC6716. Please see that RFC for additional
-information.
-
+Copyright (c) 2006-2011, Skype Limited. All rights reserved.
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions
 are met:
@@ -12,7 +8,7 @@ this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the
+- Neither the name of Internet Society, IETF or IETF Trust, nor the 
 names of specific contributors, may be used to endorse or promote
 products derived from this software without specific prior written
 permission.
@@ -49,7 +45,7 @@ static inline void silk_PLC_update(
 static inline void silk_PLC_conceal(
     silk_decoder_state                  *psDec,             /* I/O Decoder state        */
     silk_decoder_control                *psDecCtrl,         /* I/O Decoder control      */
-    opus_int16                          signal[]            /* O LPC residual signal    */
+    opus_int16                          frame[]             /* O LPC residual signal    */
 );
 
 
@@ -253,8 +249,8 @@ static inline void silk_PLC_conceal(
 
             invGain_Q30 = silk_LPC_inverse_pred_gain( psPLC->prevLPC_Q12, psDec->LPC_order );
 
-            down_scale_Q30 = silk_min_32( silk_RSHIFT( 1 << 30, LOG2_INV_LPC_GAIN_HIGH_THRES ), invGain_Q30 );
-            down_scale_Q30 = silk_max_32( silk_RSHIFT( 1 << 30, LOG2_INV_LPC_GAIN_LOW_THRES ), down_scale_Q30 );
+            down_scale_Q30 = silk_min_32( silk_RSHIFT( (opus_int32)1 << 30, LOG2_INV_LPC_GAIN_HIGH_THRES ), invGain_Q30 );
+            down_scale_Q30 = silk_max_32( silk_RSHIFT( (opus_int32)1 << 30, LOG2_INV_LPC_GAIN_LOW_THRES ), down_scale_Q30 );
             down_scale_Q30 = silk_LSHIFT( down_scale_Q30, LOG2_INV_LPC_GAIN_HIGH_THRES );
 
             rand_Gain_Q15 = silk_RSHIFT( silk_SMULWB( down_scale_Q30, rand_Gain_Q15 ), 14 );
@@ -402,14 +398,14 @@ void silk_PLC_glue_frames(
                 frac_Q24 = silk_DIV32( psPLC->conc_energy, silk_max( energy, 1 ) );
 
                 gain_Q16 = silk_LSHIFT( silk_SQRT_APPROX( frac_Q24 ), 4 );
-                slope_Q16 = silk_DIV32_16( ( 1 << 16 ) - gain_Q16, length );
+                slope_Q16 = silk_DIV32_16( ( (opus_int32)1 << 16 ) - gain_Q16, length );
                 /* Make slope 4x steeper to avoid missing onsets after DTX */
                 slope_Q16 = silk_LSHIFT( slope_Q16, 2 );
 
                 for( i = 0; i < length; i++ ) {
                     frame[ i ] = silk_SMULWB( gain_Q16, frame[ i ] );
                     gain_Q16 += slope_Q16;
-                    if( gain_Q16 > 1 << 16 ) {
+                    if( gain_Q16 > (opus_int32)1 << 16 ) {
                         break;
                     }
                 }

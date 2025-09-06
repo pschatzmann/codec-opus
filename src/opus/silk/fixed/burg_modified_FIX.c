@@ -1,9 +1,5 @@
 /***********************************************************************
-Copyright (c) 2006-2012 IETF Trust and Skype Limited. All rights reserved.
-
-This file is extracted from RFC6716. Please see that RFC for additional
-information.
-
+Copyright (c) 2006-2011, Skype Limited. All rights reserved.
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions
 are met:
@@ -12,7 +8,7 @@ this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the
+- Neither the name of Internet Society, IETF or IETF Trust, nor the 
 names of specific contributors, may be used to endorse or promote
 products derived from this software without specific prior written
 permission.
@@ -109,7 +105,7 @@ void silk_burg_modified(
     /* Initialize */
     CAb[ 0 ] = CAf[ 0 ] = C0 + silk_SMMUL( SILK_FIX_CONST( FIND_LPC_COND_FAC, 32 ), C0 ) + 1;                                /* Q(-rshifts) */
 
-    invGain_Q30 = 1 << 30;
+    invGain_Q30 = (opus_int32)1 << 30;
     reached_max_gain = 0;
     for( n = 0; n < D; n++ ) {
         /* Update first row of correlation matrix (without first element) */
@@ -196,7 +192,7 @@ void silk_burg_modified(
         tmp1 = silk_LSHIFT( silk_SMMUL( invGain_Q30, tmp1 ), 2 );
         if( tmp1 <= minInvGain_Q30 ) {
             /* Max prediction gain exceeded; set reflection coefficient such that max prediction gain is exactly hit */
-            tmp2 = ( 1 << 30 ) - silk_DIV32_varQ( minInvGain_Q30, invGain_Q30, 30 );            /* Q30 */
+            tmp2 = ( (opus_int32)1 << 30 ) - silk_DIV32_varQ( minInvGain_Q30, invGain_Q30, 30 );            /* Q30 */
             rc_Q31 = silk_SQRT_APPROX( tmp2 );                                                  /* Q15 */
             /* Newton-Raphson iteration */
             rc_Q31 = silk_RSHIFT32( rc_Q31 + silk_DIV32( tmp2, rc_Q31 ), 1 );                   /* Q15 */
@@ -260,7 +256,7 @@ void silk_burg_modified(
     } else {
         /* Return residual energy */
         nrg  = CAf[ 0 ];                                                                            /* Q( -rshifts ) */
-        tmp1 = 1 << 16;                                                                             /* Q16 */
+        tmp1 = (opus_int32)1 << 16;                                                                             /* Q16 */
         for( k = 0; k < D; k++ ) {
             Atmp1 = silk_RSHIFT_ROUND( Af_QA[ k ], QA - 16 );                                       /* Q16 */
             nrg  = silk_SMLAWW( nrg, CAf[ k + 1 ], Atmp1 );                                         /* Q( -rshifts ) */
@@ -269,5 +265,5 @@ void silk_burg_modified(
         }
         *res_nrg = silk_SMLAWW( nrg, silk_SMMUL( FIND_LPC_COND_FAC, C0 ), -tmp1 );                  /* Q( -rshifts ) */
         *res_nrg_Q = -rshifts;
-    }
+    }   
 }
