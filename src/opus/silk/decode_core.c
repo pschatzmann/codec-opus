@@ -1,9 +1,5 @@
 /***********************************************************************
-Copyright (c) 2006-2012 IETF Trust and Skype Limited. All rights reserved.
-
-This file is extracted from RFC6716. Please see that RFC for additional
-information.
-
+Copyright (c) 2006-2011, Skype Limited. All rights reserved.
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions
 are met:
@@ -12,7 +8,7 @@ this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the
+- Neither the name of Internet Society, IETF or IETF Trust, nor the 
 names of specific contributors, may be used to endorse or promote
 products derived from this software without specific prior written
 permission.
@@ -111,7 +107,7 @@ void silk_decode_core(
                 sLPC_Q14[ i ] = silk_SMULWW( gain_adj_Q16, sLPC_Q14[ i ] );
             }
         } else {
-            gain_adj_Q16 = 1 << 16;
+            gain_adj_Q16 = (opus_int32)1 << 16;
         }
 
         /* Save inv_gain */
@@ -156,7 +152,7 @@ void silk_decode_core(
                 }
             } else {
                 /* Update LTP state when Gain changes */
-                if( gain_adj_Q16 != 1 << 16 ) {
+                if( gain_adj_Q16 != (opus_int32)1 << 16 ) {
                     for( i = 0; i < lag + LTP_ORDER/2; i++ ) {
                         sLTP_Q15[ sLTP_buf_idx - i - 1 ] = silk_SMULWW( gain_adj_Q16, sLTP_Q15[ sLTP_buf_idx - i - 1 ] );
                     }

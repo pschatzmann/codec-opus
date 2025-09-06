@@ -1,5 +1,6 @@
-/* Copyright (c) 2007-2012 IETF Trust, CSIRO, Xiph.Org Foundation,
-                           Gregory Maxwell. All rights reserved.
+/* Copyright (c) 2007-2008 CSIRO
+   Copyright (c) 2007-2009 Xiph.Org Foundation
+   Copyright (c) 2008 Gregory Maxwell
    Written by Jean-Marc Valin and Gregory Maxwell */
 /**
   @file celt.h
@@ -7,10 +8,6 @@
  */
 
 /*
-
-   This file is extracted from RFC6716. Please see that RFC for additional
-   information.
-
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
@@ -21,11 +18,6 @@
    - Redistributions in binary form must reproduce the above copyright
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
-
-   - Neither the name of Internet Society, IETF or IETF Trust, nor the
-   names of specific contributors, may be used to endorse or promote
-   products derived from this software without specific prior written
-   permission.
 
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -100,7 +92,7 @@ extern "C" {
 
 int celt_encoder_get_size(int channels);
 
-int celt_encode_with_ec(OpusCustomEncoder * restrict st, const opus_val16 * pcm, int frame_size, unsigned char *compressed, int nbCompressedBytes, ec_enc *enc);
+int celt_encode_with_ec(OpusCustomEncoder * OPUS_RESTRICT st, const opus_val16 * pcm, int frame_size, unsigned char *compressed, int nbCompressedBytes, ec_enc *enc);
 
 int celt_encoder_init(CELTEncoder *st, opus_int32 sampling_rate, int channels);
 
@@ -113,7 +105,7 @@ int celt_decoder_get_size(int channels);
 
 int celt_decoder_init(CELTDecoder *st, opus_int32 sampling_rate, int channels);
 
-int celt_decode_with_ec(OpusCustomDecoder * restrict st, const unsigned char *data, int len, opus_val16 * restrict pcm, int frame_size, ec_dec *dec);
+int celt_decode_with_ec(OpusCustomDecoder * OPUS_RESTRICT st, const unsigned char *data, int len, opus_val16 * OPUS_RESTRICT pcm, int frame_size, ec_dec *dec);
 
 #define celt_encoder_ctl opus_custom_encoder_ctl
 #define celt_decoder_ctl opus_custom_decoder_ctl

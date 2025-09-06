@@ -1,10 +1,6 @@
-/* Copyright (c) 2011-2012 IETF Trust, Xiph.Org Foundation. All rights reserved.
+/* Copyright (c) 2011 Xiph.Org Foundation
    Written by Jean-Marc Valin */
 /*
-
-   This file is extracted from RFC6716. Please see that RFC for additional
-   information.
-
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
@@ -15,11 +11,6 @@
    - Redistributions in binary form must reproduce the above copyright
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
-
-   - Neither the name of Internet Society, IETF or IETF Trust, nor the
-   names of specific contributors, may be used to endorse or promote
-   products derived from this software without specific prior written
-   permission.
 
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -78,7 +69,7 @@ int main(int argc, char *argv[])
    if (argc < 3)
    {
       usage(argv[0]);
-      return 1;
+      return EXIT_FAILURE;
    }
    for (i=1;i<argc-2;i++)
    {
@@ -88,7 +79,7 @@ int main(int argc, char *argv[])
          if(merge<1)
          {
             fprintf(stderr, "-merge parameter must be at least 1.\n");
-            return 1;
+            return EXIT_FAILURE;
          }
          i++;
       } else if (strcmp(argv[i], "-split")==0)
@@ -97,21 +88,21 @@ int main(int argc, char *argv[])
       {
          fprintf(stderr, "Unknown option: %s\n", argv[i]);
          usage(argv[0]);
-         return 1;
+         return EXIT_FAILURE;
       }
    }
    fin = fopen(argv[argc-2], "r");
    if(fin==NULL)
    {
      fprintf(stderr, "Error opening input file: %s\n", argv[argc-2]);
-     return 1;
+     return EXIT_FAILURE;
    }
    fout = fopen(argv[argc-1], "w");
    if(fout==NULL)
    {
      fprintf(stderr, "Error opening output file: %s\n", argv[argc-1]);
      fclose(fin);
-     return 1;
+     return EXIT_FAILURE;
    }
 
    rp = opus_repacketizer_create();
@@ -135,7 +126,7 @@ int main(int argc, char *argv[])
                 fprintf(stderr, "Invalid payload length\n");
                 fclose(fin);
                 fclose(fout);
-                return 1;
+                return EXIT_FAILURE;
              }
              break;
          }
@@ -165,10 +156,19 @@ int main(int argc, char *argv[])
          if (err>0) {
             unsigned char int_field[4];
             int_to_char(err, int_field);
-            fwrite(int_field, 1, 4, fout);
+            if(fwrite(int_field, 1, 4, fout)!=4){
+               fprintf(stderr, "Error writing.\n");
+               return EXIT_FAILURE;
+            }
             int_to_char(rng[nb_packets-1], int_field);
-            fwrite(int_field, 1, 4, fout);
-            fwrite(output_packet, 1, err, fout);
+            if (fwrite(int_field, 1, 4, fout)!=4) {
+               fprintf(stderr, "Error writing.\n");
+               return EXIT_FAILURE;
+            }
+            if (fwrite(output_packet, 1, err, fout)!=(unsigned)err) {
+               fprintf(stderr, "Error writing.\n");
+               return EXIT_FAILURE;
+            }
             /*fprintf(stderr, "out len = %d\n", err);*/
          } else {
             fprintf(stderr, "opus_repacketizer_out() failed: %s\n", opus_strerror(err));
@@ -181,13 +181,22 @@ int main(int argc, char *argv[])
             if (err>0) {
                unsigned char int_field[4];
                int_to_char(err, int_field);
-               fwrite(int_field, 1, 4, fout);
+               if (fwrite(int_field, 1, 4, fout)!=4) {
+                  fprintf(stderr, "Error writing.\n");
+                  return EXIT_FAILURE;
+               }
                if (i==nb_frames-1)
                   int_to_char(rng[nb_packets-1], int_field);
                else
                   int_to_char(0, int_field);
-               fwrite(int_field, 1, 4, fout);
-               fwrite(output_packet, 1, err, fout);
+               if (fwrite(int_field, 1, 4, fout)!=4) {
+                  fprintf(stderr, "Error writing.\n");
+                  return EXIT_FAILURE;
+               }
+               if (fwrite(output_packet, 1, err, fout)!=(unsigned)err) {
+                  fprintf(stderr, "Error writing.\n");
+                  return EXIT_FAILURE;
+               }
                /*fprintf(stderr, "out len = %d\n", err);*/
             } else {
                fprintf(stderr, "opus_repacketizer_out() failed: %s\n", opus_strerror(err));
@@ -195,10 +204,9 @@ int main(int argc, char *argv[])
 
          }
       }
-
    }
 
    fclose(fin);
    fclose(fout);
-   return 0;
+   return EXIT_SUCCESS;
 }

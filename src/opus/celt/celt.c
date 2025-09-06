@@ -1,11 +1,8 @@
-/* Copyright (c) 2007-2012 IETF Trust, CSIRO, Xiph.Org Foundation,
-                           Gregory Maxwell. All rights reserved.
+/* Copyright (c) 2007-2008 CSIRO
+   Copyright (c) 2007-2010 Xiph.Org Foundation
+   Copyright (c) 2008 Gregory Maxwell
    Written by Jean-Marc Valin and Gregory Maxwell */
 /*
-
-   This file is extracted from RFC6716. Please see that RFC for additional
-   information.
-
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
@@ -16,11 +13,6 @@
    - Redistributions in binary form must reproduce the above copyright
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
-
-   - Neither the name of Internet Society, IETF or IETF Trust, nor the
-   names of specific contributors, may be used to endorse or promote
-   products derived from this software without specific prior written
-   permission.
 
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -164,6 +156,7 @@ struct OpusCustomEncoder {
    int signalling;
    int constrained_vbr;      /* If zero, VBR can do whatever it likes with the rate */
    int loss_rate;
+   int lsb_depth;
 
    /* Everything beyond this point gets cleared on a reset */
 #define ENCODER_RESET_START rng
@@ -274,6 +267,7 @@ OPUS_CUSTOM_NOSTATIC int opus_custom_encoder_init(CELTEncoder *st, const CELTMod
    st->vbr = 0;
    st->force_intra  = 0;
    st->complexity = 5;
+   st->lsb_depth=24;
 
    opus_custom_encoder_ctl(st, OPUS_RESET_STATE);
 
@@ -299,7 +293,7 @@ static inline opus_val16 SIG2WORD16(celt_sig x)
 #endif
 }
 
-static int transient_analysis(const opus_val32 * restrict in, int len, int C,
+static int transient_analysis(const opus_val32 * OPUS_RESTRICT in, int len, int C,
                               int overlap)
 {
    int i;
@@ -337,7 +331,7 @@ static int transient_analysis(const opus_val32 * restrict in, int len, int C,
       mem0 = mem1 + y - 2*x;
       mem1 = x - .5f*y;
 #endif
-      tmp[i] = EXTRACT16(SHR(y,2));
+      tmp[i] = EXTRACT16(SHR32(y,2));
    }
    /* First few samples are bad because we don't propagate the memory */
    for (i=0;i<12;i++)
@@ -391,7 +385,7 @@ static int transient_analysis(const opus_val32 * restrict in, int len, int C,
 
 /** Apply window and compute the MDCT for all sub-frames and
     all channels in a frame */
-static void compute_mdcts(const CELTMode *mode, int shortBlocks, celt_sig * restrict in, celt_sig * restrict out, int C, int LM)
+static void compute_mdcts(const CELTMode *mode, int shortBlocks, celt_sig * OPUS_RESTRICT in, celt_sig * OPUS_RESTRICT out, int C, int LM)
 {
    if (C==1 && !shortBlocks)
    {
@@ -420,8 +414,8 @@ static void compute_mdcts(const CELTMode *mode, int shortBlocks, celt_sig * rest
 /** Compute the IMDCT and apply window for all sub-frames and
     all channels in a frame */
 static void compute_inv_mdcts(const CELTMode *mode, int shortBlocks, celt_sig *X,
-      celt_sig * restrict out_mem[],
-      celt_sig * restrict overlap_mem[], int C, int LM)
+      celt_sig * OPUS_RESTRICT out_mem[],
+      celt_sig * OPUS_RESTRICT overlap_mem[], int C, int LM)
 {
    int c;
    const int N = mode->shortMdctSize<<LM;
@@ -466,8 +460,8 @@ static void deemphasis(celt_sig *in[], opus_val16 *pcm, int N, int C, int downsa
    int count=0;
    c=0; do {
       int j;
-      celt_sig * restrict x;
-      opus_val16  * restrict y;
+      celt_sig * OPUS_RESTRICT x;
+      opus_val16  * OPUS_RESTRICT y;
       celt_sig m = mem[c];
       x =in[c];
       y = pcm+c;
@@ -615,7 +609,7 @@ static int tf_analysis(const CELTMode *m, int len, int C, int isTransient,
       /* Just add the right channel if we're in stereo */
       if (C==2)
          for (j=0;j<N;j++)
-            tmp[j] = ADD16(tmp[j],X[N0+j+(m->eBands[i]<<LM)]);
+            tmp[j] = ADD16(SHR16(tmp[j], 1),SHR16(X[N0+j+(m->eBands[i]<<LM)], 1));
       L1 = l1_metric(tmp, N, isTransient ? LM : 0, N>>LM);
       best_L1 = L1;
       /*printf ("%f ", L1);*/
@@ -868,13 +862,14 @@ static int stereo_analysis(const CELTMode *m, const celt_norm *X,
       int j;
       for (j=m->eBands[i]<<LM;j<m->eBands[i+1]<<LM;j++)
       {
-         opus_val16 L, R, M, S;
-         L = X[j];
-         R = X[N0+j];
-         M = L+R;
-         S = L-R;
-         sumLR += EXTEND32(ABS16(L)) + EXTEND32(ABS16(R));
-         sumMS += EXTEND32(ABS16(M)) + EXTEND32(ABS16(S));
+         opus_val32 L, R, M, S;
+         /* We cast to 32-bit first because of the -32768 case */
+         L = EXTEND32(X[j]);
+         R = EXTEND32(X[N0+j]);
+         M = ADD32(L, R);
+         S = SUB32(L, R);
+         sumLR = ADD32(sumLR, ADD32(ABS32(L), ABS32(R)));
+         sumMS = ADD32(sumMS, ADD32(ABS32(M), ABS32(S)));
       }
    }
    sumMS = MULT16_32_Q15(QCONST16(0.707107f, 15), sumMS);
@@ -886,7 +881,7 @@ static int stereo_analysis(const CELTMode *m, const celt_norm *X,
          > MULT16_32_Q15(m->eBands[13]<<(LM+1), sumLR);
 }
 
-int celt_encode_with_ec(CELTEncoder * restrict st, const opus_val16 * pcm, int frame_size, unsigned char *compressed, int nbCompressedBytes, ec_enc *enc)
+int celt_encode_with_ec(CELTEncoder * OPUS_RESTRICT st, const opus_val16 * pcm, int frame_size, unsigned char *compressed, int nbCompressedBytes, ec_enc *enc)
 {
    int i, c, N;
    opus_int32 bits;
@@ -1063,8 +1058,8 @@ int celt_encode_with_ec(CELTEncoder * restrict st, const opus_val16 * pcm, int f
       silence = 1;
       c=0; do {
          int count = 0;
-         const opus_val16 * restrict pcmp = pcm+c;
-         celt_sig * restrict inp = in+c*(N+st->overlap)+st->overlap;
+         const opus_val16 * OPUS_RESTRICT pcmp = pcm+c;
+         celt_sig * OPUS_RESTRICT inp = in+c*(N+st->overlap)+st->overlap;
 
          for (i=0;i<N;i++)
          {
@@ -1392,6 +1387,9 @@ int celt_encode_with_ec(CELTEncoder * restrict st, const opus_val16 * pcm, int f
      opus_int32 min_allowed;
      int lm_diff = st->mode->maxLM - LM;
 
+     /* Don't attempt to use more than 510 kb/s, even for frames smaller than 20 ms.
+        The CELT allocator will just not be able to use more than that anyway. */
+     nbCompressedBytes = IMIN(nbCompressedBytes,1275>>(3-LM));
      target = vbr_rate + (st->vbr_offset>>lm_diff) - ((40*C+20)<<BITRES);
 
      /* Shortblocks get a large boost in bitrate, but since they
@@ -1683,13 +1681,13 @@ int celt_encode_with_ec(CELTEncoder * restrict st, const opus_val16 * pcm, int f
 #ifdef CUSTOM_MODES
 
 #ifdef FIXED_POINT
-int opus_custom_encode(CELTEncoder * restrict st, const opus_int16 * pcm, int frame_size, unsigned char *compressed, int nbCompressedBytes)
+int opus_custom_encode(CELTEncoder * OPUS_RESTRICT st, const opus_int16 * pcm, int frame_size, unsigned char *compressed, int nbCompressedBytes)
 {
    return celt_encode_with_ec(st, pcm, frame_size, compressed, nbCompressedBytes, NULL);
 }
 
 #ifndef DISABLE_FLOAT_API
-int opus_custom_encode_float(CELTEncoder * restrict st, const float * pcm, int frame_size, unsigned char *compressed, int nbCompressedBytes)
+int opus_custom_encode_float(CELTEncoder * OPUS_RESTRICT st, const float * pcm, int frame_size, unsigned char *compressed, int nbCompressedBytes)
 {
    int j, ret, C, N;
    VARDECL(opus_int16, in);
@@ -1716,7 +1714,7 @@ int opus_custom_encode_float(CELTEncoder * restrict st, const float * pcm, int f
 #endif /* DISABLE_FLOAT_API */
 #else
 
-int opus_custom_encode(CELTEncoder * restrict st, const opus_int16 * pcm, int frame_size, unsigned char *compressed, int nbCompressedBytes)
+int opus_custom_encode(CELTEncoder * OPUS_RESTRICT st, const opus_int16 * pcm, int frame_size, unsigned char *compressed, int nbCompressedBytes)
 {
    int j, ret, C, N;
    VARDECL(celt_sig, in);
@@ -1741,7 +1739,7 @@ int opus_custom_encode(CELTEncoder * restrict st, const opus_int16 * pcm, int fr
    return ret;
 }
 
-int opus_custom_encode_float(CELTEncoder * restrict st, const float * pcm, int frame_size, unsigned char *compressed, int nbCompressedBytes)
+int opus_custom_encode_float(CELTEncoder * OPUS_RESTRICT st, const float * pcm, int frame_size, unsigned char *compressed, int nbCompressedBytes)
 {
    return celt_encode_with_ec(st, pcm, frame_size, compressed, nbCompressedBytes, NULL);
 }
@@ -1750,7 +1748,7 @@ int opus_custom_encode_float(CELTEncoder * restrict st, const float * pcm, int f
 
 #endif /* CUSTOM_MODES */
 
-int opus_custom_encoder_ctl(CELTEncoder * restrict st, int request, ...)
+int opus_custom_encoder_ctl(CELTEncoder * OPUS_RESTRICT st, int request, ...)
 {
    va_list ap;
 
@@ -1825,6 +1823,20 @@ int opus_custom_encoder_ctl(CELTEncoder * restrict st, int request, ...)
          if (value<1 || value>2)
             goto bad_arg;
          st->stream_channels = value;
+      }
+      break;
+      case OPUS_SET_LSB_DEPTH_REQUEST:
+      {
+          opus_int32 value = va_arg(ap, opus_int32);
+          if (value<8 || value>24)
+             goto bad_arg;
+          st->lsb_depth=value;
+      }
+      break;
+      case OPUS_GET_LSB_DEPTH_REQUEST:
+      {
+          opus_int32 *value = va_arg(ap, opus_int32*);
+          *value=st->lsb_depth;
       }
       break;
       case OPUS_RESET_STATE:
@@ -2012,7 +2024,7 @@ void opus_custom_decoder_destroy(CELTDecoder *st)
 }
 #endif /* CUSTOM_MODES */
 
-static void celt_decode_lost(CELTDecoder * restrict st, opus_val16 * restrict pcm, int N, int LM)
+static void celt_decode_lost(CELTDecoder * OPUS_RESTRICT st, opus_val16 * OPUS_RESTRICT pcm, int N, int LM)
 {
    int c;
    int pitch_index;
@@ -2189,7 +2201,7 @@ static void celt_decode_lost(CELTDecoder * restrict st, opus_val16 * restrict pc
             }
             if (E1 > E2)
                E1 = E2;
-            decay = celt_sqrt(frac_div32(SHR(E1,1),E2));
+            decay = celt_sqrt(frac_div32(SHR32(E1,1),E2));
          }
 
          /* Copy excitation, taking decay into account */
@@ -2273,7 +2285,7 @@ static void celt_decode_lost(CELTDecoder * restrict st, opus_val16 * restrict pc
    RESTORE_STACK;
 }
 
-int celt_decode_with_ec(CELTDecoder * restrict st, const unsigned char *data, int len, opus_val16 * restrict pcm, int frame_size, ec_dec *dec)
+int celt_decode_with_ec(CELTDecoder * OPUS_RESTRICT st, const unsigned char *data, int len, opus_val16 * OPUS_RESTRICT pcm, int frame_size, ec_dec *dec)
 {
    int c, i, N;
    int spread_decision;
@@ -2655,13 +2667,13 @@ int celt_decode_with_ec(CELTDecoder * restrict st, const unsigned char *data, in
 #ifdef CUSTOM_MODES
 
 #ifdef FIXED_POINT
-int opus_custom_decode(CELTDecoder * restrict st, const unsigned char *data, int len, opus_int16 * restrict pcm, int frame_size)
+int opus_custom_decode(CELTDecoder * OPUS_RESTRICT st, const unsigned char *data, int len, opus_int16 * OPUS_RESTRICT pcm, int frame_size)
 {
    return celt_decode_with_ec(st, data, len, pcm, frame_size, NULL);
 }
 
 #ifndef DISABLE_FLOAT_API
-int opus_custom_decode_float(CELTDecoder * restrict st, const unsigned char *data, int len, float * restrict pcm, int frame_size)
+int opus_custom_decode_float(CELTDecoder * OPUS_RESTRICT st, const unsigned char *data, int len, float * OPUS_RESTRICT pcm, int frame_size)
 {
    int j, ret, C, N;
    VARDECL(opus_int16, out);
@@ -2686,12 +2698,12 @@ int opus_custom_decode_float(CELTDecoder * restrict st, const unsigned char *dat
 
 #else
 
-int opus_custom_decode_float(CELTDecoder * restrict st, const unsigned char *data, int len, float * restrict pcm, int frame_size)
+int opus_custom_decode_float(CELTDecoder * OPUS_RESTRICT st, const unsigned char *data, int len, float * OPUS_RESTRICT pcm, int frame_size)
 {
    return celt_decode_with_ec(st, data, len, pcm, frame_size, NULL);
 }
 
-int opus_custom_decode(CELTDecoder * restrict st, const unsigned char *data, int len, opus_int16 * restrict pcm, int frame_size)
+int opus_custom_decode(CELTDecoder * OPUS_RESTRICT st, const unsigned char *data, int len, opus_int16 * OPUS_RESTRICT pcm, int frame_size)
 {
    int j, ret, C, N;
    VARDECL(celt_sig, out);
@@ -2717,7 +2729,7 @@ int opus_custom_decode(CELTDecoder * restrict st, const unsigned char *data, int
 #endif
 #endif /* CUSTOM_MODES */
 
-int opus_custom_decoder_ctl(CELTDecoder * restrict st, int request, ...)
+int opus_custom_decoder_ctl(CELTDecoder * OPUS_RESTRICT st, int request, ...)
 {
    va_list ap;
 
@@ -2750,7 +2762,7 @@ int opus_custom_decoder_ctl(CELTDecoder * restrict st, int request, ...)
       break;
       case CELT_GET_AND_CLEAR_ERROR_REQUEST:
       {
-         int *value = va_arg(ap, opus_int32*);
+         opus_int32 *value = va_arg(ap, opus_int32*);
          if (value==NULL)
             goto bad_arg;
          *value=st->error;
@@ -2759,7 +2771,7 @@ int opus_custom_decoder_ctl(CELTDecoder * restrict st, int request, ...)
       break;
       case OPUS_GET_LOOKAHEAD_REQUEST:
       {
-         int *value = va_arg(ap, opus_int32*);
+         opus_int32 *value = va_arg(ap, opus_int32*);
          if (value==NULL)
             goto bad_arg;
          *value = st->overlap/st->downsample;
@@ -2782,7 +2794,7 @@ int opus_custom_decoder_ctl(CELTDecoder * restrict st, int request, ...)
       break;
       case OPUS_GET_PITCH_REQUEST:
       {
-         int *value = va_arg(ap, opus_int32*);
+         opus_int32 *value = va_arg(ap, opus_int32*);
          if (value==NULL)
             goto bad_arg;
          *value = st->postfilter_period;
@@ -2829,7 +2841,7 @@ bad_request:
 
 const char *opus_strerror(int error)
 {
-   static const char *error_strings[8] = {
+   static const char * const error_strings[8] = {
       "success",
       "invalid argument",
       "buffer too small",
@@ -2848,6 +2860,9 @@ const char *opus_strerror(int error)
 const char *opus_get_version_string(void)
 {
     return "libopus " OPUS_VERSION
+#ifdef FIXED_POINT
+          "-fixed"
+#endif
 #ifdef FUZZING
           "-fuzzing"
 #endif

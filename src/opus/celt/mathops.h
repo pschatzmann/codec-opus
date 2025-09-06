@@ -1,15 +1,12 @@
-/* Copyright (c) 2002-2012 IETF Trust, Jean-Marc Valin, CSIRO,
-                           Xiph.Org Foundation. All rights reserved.
+/* Copyright (c) 2002-2008 Jean-Marc Valin
+   Copyright (c) 2007-2008 CSIRO
+   Copyright (c) 2007-2009 Xiph.Org Foundation
    Written by Jean-Marc Valin */
 /**
    @file mathops.h
    @brief Various math functions
 */
 /*
-
-   This file is extracted from RFC6716. Please see that RFC for additional
-   information.
-
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
@@ -20,11 +17,6 @@
    - Redistributions in binary form must reproduce the above copyright
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
-
-   - Neither the name of Internet Society, IETF or IETF Trust, nor the
-   names of specific contributors, may be used to endorse or promote
-   products derived from this software without specific prior written
-   permission.
 
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -132,6 +124,17 @@ static inline opus_val16 celt_maxabs16(opus_val16 *x, int len)
    opus_val16 maxval = 0;
    for (i=0;i<len;i++)
       maxval = MAX16(maxval, ABS16(x[i]));
+   return maxval;
+}
+#endif
+
+#ifndef OVERRIDE_CELT_MAXABS32
+static inline opus_val32 celt_maxabs32(opus_val32 *x, int len)
+{
+   int i;
+   opus_val32 maxval = 0;
+   for (i=0;i<len;i++)
+      maxval = MAX32(maxval, ABS32(x[i]));
    return maxval;
 }
 #endif

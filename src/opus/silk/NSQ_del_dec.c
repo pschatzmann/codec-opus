@@ -1,9 +1,5 @@
 /***********************************************************************
-Copyright (c) 2006-2012 IETF Trust and Skype Limited. All rights reserved.
-
-This file is extracted from RFC6716. Please see that RFC for additional
-information.
-
+Copyright (c) 2006-2011, Skype Limited. All rights reserved.
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions
 are met:
@@ -12,7 +8,7 @@ this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the
+- Neither the name of Internet Society, IETF or IETF Trust, nor the 
 names of specific contributors, may be used to endorse or promote
 products derived from this software without specific prior written
 permission.
@@ -649,7 +645,7 @@ static inline void silk_nsq_del_dec_scale_states(
     if( Gains_Q16[ subfr ] != NSQ->prev_gain_Q16 ) {
         gain_adj_Q16 =  silk_DIV32_varQ( NSQ->prev_gain_Q16, Gains_Q16[ subfr ], 16 );
     } else {
-        gain_adj_Q16 = 1 << 16;
+        gain_adj_Q16 = (opus_int32)1 << 16;
     }
 
     /* Scale input */
@@ -674,7 +670,7 @@ static inline void silk_nsq_del_dec_scale_states(
     }
 
     /* Adjust for changing gain */
-    if( gain_adj_Q16 != 1 << 16 ) {
+    if( gain_adj_Q16 != (opus_int32)1 << 16 ) {
         /* Scale long-term shaping state */
         for( i = NSQ->sLTP_shp_buf_idx - psEncC->ltp_mem_length; i < NSQ->sLTP_shp_buf_idx; i++ ) {
             NSQ->sLTP_shp_Q14[ i ] = silk_SMULWW( gain_adj_Q16, NSQ->sLTP_shp_Q14[ i ] );

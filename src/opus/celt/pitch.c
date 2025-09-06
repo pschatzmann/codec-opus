@@ -1,4 +1,5 @@
-/* Copyright (c) 2007-2012 IETF Trust, CSIRO, Xiph.Org Foundation. All rights reserved.
+/* Copyright (c) 2007-2008 CSIRO
+   Copyright (c) 2007-2009 Xiph.Org Foundation
    Written by Jean-Marc Valin */
 /**
    @file pitch.c
@@ -6,10 +7,6 @@
  */
 
 /*
-
-   This file is extracted from RFC6716. Please see that RFC for additional
-   information.
-
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
@@ -20,11 +17,6 @@
    - Redistributions in binary form must reproduce the above copyright
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
-
-   - Neither the name of Internet Society, IETF or IETF Trust, nor the
-   names of specific contributors, may be used to endorse or promote
-   products derived from this software without specific prior written
-   permission.
 
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -74,7 +66,7 @@ static void find_best_pitch(opus_val32 *xcorr, opus_val16 *y, int len,
    best_pitch[0] = 0;
    best_pitch[1] = 1;
    for (j=0;j<len;j++)
-      Syy = MAC16_16(Syy, y[j],y[j]);
+      Syy = ADD32(Syy, SHR32(MULT16_16(y[j],y[j]), yshift));
    for (i=0;i<max_pitch;i++)
    {
       if (xcorr[i]>0)
@@ -82,6 +74,11 @@ static void find_best_pitch(opus_val32 *xcorr, opus_val16 *y, int len,
          opus_val16 num;
          opus_val32 xcorr16;
          xcorr16 = EXTRACT16(VSHR32(xcorr[i], xshift));
+#ifndef FIXED_POINT
+         /* Considering the range of xcorr16, this should avoid both underflows
+            and overflows (inf) when squaring xcorr16 */
+         xcorr16 *= 1e-12;
+#endif
          num = MULT16_16_Q15(xcorr16,xcorr16);
          if (MULT16_32_Q15(num,best_den[1]) > MULT16_32_Q15(best_num[1],Syy))
          {
@@ -105,21 +102,37 @@ static void find_best_pitch(opus_val32 *xcorr, opus_val16 *y, int len,
    }
 }
 
-void pitch_downsample(celt_sig * restrict x[], opus_val16 * restrict x_lp,
+void pitch_downsample(celt_sig * OPUS_RESTRICT x[], opus_val16 * OPUS_RESTRICT x_lp,
       int len, int C)
 {
    int i;
    opus_val32 ac[5];
    opus_val16 tmp=Q15ONE;
    opus_val16 lpc[4], mem[4]={0,0,0,0};
+#ifdef FIXED_POINT
+   int shift;
+   opus_val32 maxabs = celt_maxabs32(x[0], len);
+   if (C==2)
+   {
+      opus_val32 maxabs_1 = celt_maxabs32(x[1], len);
+      maxabs = MAX32(maxabs, maxabs_1);
+   }
+   if (maxabs<1)
+      maxabs=1;
+   shift = celt_ilog2(maxabs)-10;
+   if (shift<0)
+      shift=0;
+   if (C==2)
+      shift++;
+#endif
    for (i=1;i<len>>1;i++)
-      x_lp[i] = SHR32(HALF32(HALF32(x[0][(2*i-1)]+x[0][(2*i+1)])+x[0][2*i]), SIG_SHIFT+3);
-   x_lp[0] = SHR32(HALF32(HALF32(x[0][1])+x[0][0]), SIG_SHIFT+3);
+      x_lp[i] = SHR32(HALF32(HALF32(x[0][(2*i-1)]+x[0][(2*i+1)])+x[0][2*i]), shift);
+   x_lp[0] = SHR32(HALF32(HALF32(x[0][1])+x[0][0]), shift);
    if (C==2)
    {
       for (i=1;i<len>>1;i++)
-         x_lp[i] += SHR32(HALF32(HALF32(x[1][(2*i-1)]+x[1][(2*i+1)])+x[1][2*i]), SIG_SHIFT+3);
-      x_lp[0] += SHR32(HALF32(HALF32(x[1][1])+x[1][0]), SIG_SHIFT+3);
+         x_lp[i] += SHR32(HALF32(HALF32(x[1][(2*i-1)]+x[1][(2*i+1)])+x[1][2*i]), shift);
+      x_lp[0] += SHR32(HALF32(HALF32(x[1][1])+x[1][0]), shift);
    }
 
    _celt_autocorr(x_lp, ac, NULL, 0,
@@ -156,7 +169,7 @@ void pitch_downsample(celt_sig * restrict x[], opus_val16 * restrict x_lp,
 
 }
 
-void pitch_search(const opus_val16 * restrict x_lp, opus_val16 * restrict y,
+void pitch_search(const opus_val16 * OPUS_RESTRICT x_lp, opus_val16 * OPUS_RESTRICT y,
                   int len, int max_pitch, int *pitch)
 {
    int i, j;
@@ -167,6 +180,7 @@ void pitch_search(const opus_val16 * restrict x_lp, opus_val16 * restrict y,
    VARDECL(opus_val32, xcorr);
 #ifdef FIXED_POINT
    opus_val32 maxcorr=1;
+   opus_val16 xmax, ymax;
    int shift=0;
 #endif
    int offset;
@@ -188,7 +202,9 @@ void pitch_search(const opus_val16 * restrict x_lp, opus_val16 * restrict y,
       y_lp4[j] = y[2*j];
 
 #ifdef FIXED_POINT
-   shift = celt_ilog2(MAX16(1, MAX16(celt_maxabs16(x_lp4, len>>2), celt_maxabs16(y_lp4, lag>>2))))-11;
+   xmax = celt_maxabs16(x_lp4, len>>2);
+   ymax = celt_maxabs16(y_lp4, lag>>2);
+   shift = celt_ilog2(MAX16(1, MAX16(xmax, ymax)))-11;
    if (shift>0)
    {
       for (j=0;j<len>>2;j++)
@@ -239,7 +255,7 @@ void pitch_search(const opus_val16 * restrict x_lp, opus_val16 * restrict y,
    }
    find_best_pitch(xcorr, y, len>>1, max_pitch>>1, best_pitch
 #ifdef FIXED_POINT
-                   , shift, maxcorr
+                   , shift+1, maxcorr
 #endif
                    );
 
@@ -364,6 +380,7 @@ opus_val16 remove_doubling(opus_val16 *x, int maxperiod, int minperiod,
          g = g1;
       }
    }
+   best_xy = MAX32(0, best_xy);
    if (best_yy <= best_xy)
       pg = Q15ONE;
    else
