@@ -13,7 +13,6 @@ import subprocess
 import sys
 import time
 import re
-import shutil
 from packaging import version
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -95,12 +94,6 @@ def main():
         subprocess.run(['git', 'checkout', tag], cwd=OPUS_DIR, check=True)
 
         update_library_properties_version(tag)
-        
-        # Delete the src/opus directory to clean up before setup
-        opus_src_dir = os.path.join(SCRIPT_DIR, '..', 'src', 'opus')
-        if os.path.exists(opus_src_dir):
-            print(f"Deleting existing src/opus directory...")
-            shutil.rmtree(opus_src_dir)
         
         print(f"Running setup_arduino_library.py for tag '{tag}'...")
         subprocess.run([sys.executable, SETUP_SCRIPT], check=True)
