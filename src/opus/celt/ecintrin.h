@@ -33,7 +33,7 @@
 #if !defined(_ecintrin_H)
 # define _ecintrin_H (1)
 
-/*Some specific platforms may have optimized intrinsic or inline assembly
+/*Some specific platforms may have optimized intrinsic or OPUS_INLINE assembly
    versions of these functions which can substantially improve performance.
   We define macros for them to allow easy incorporation of these non-ANSI
    features.*/
@@ -49,7 +49,11 @@
   This macro should only be used for implementing ec_ilog(), if it is defined.
   All other code should use EC_ILOG() instead.*/
 #if defined(_MSC_VER) && (_MSC_VER >= 1400)
+#if defined(_MSC_VER) && (_MSC_VER >= 1910)
+# include <intrin0.h> /* Improve compiler throughput. */
+#else
 # include <intrin.h>
+#endif
 /*In _DEBUG mode this is not an intrinsic by default.*/
 # pragma intrinsic(_BitScanReverse)
 

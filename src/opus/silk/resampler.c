@@ -8,11 +8,11 @@ this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the 
+- Neither the name of Internet Society, IETF or IETF Trust, nor the
 names of specific contributors, may be used to endorse or promote
 products derived from this software without specific prior written
 permission.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
 ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
@@ -91,14 +91,14 @@ opus_int silk_resampler_init(
     if( forEnc ) {
         if( ( Fs_Hz_in  != 8000 && Fs_Hz_in  != 12000 && Fs_Hz_in  != 16000 && Fs_Hz_in  != 24000 && Fs_Hz_in  != 48000 ) ||
             ( Fs_Hz_out != 8000 && Fs_Hz_out != 12000 && Fs_Hz_out != 16000 ) ) {
-            silk_assert( 0 );
+            celt_assert( 0 );
             return -1;
         }
         S->inputDelay = delay_matrix_enc[ rateID( Fs_Hz_in ) ][ rateID( Fs_Hz_out ) ];
     } else {
         if( ( Fs_Hz_in  != 8000 && Fs_Hz_in  != 12000 && Fs_Hz_in  != 16000 ) ||
             ( Fs_Hz_out != 8000 && Fs_Hz_out != 12000 && Fs_Hz_out != 16000 && Fs_Hz_out != 24000 && Fs_Hz_out != 48000 ) ) {
-            silk_assert( 0 );
+            celt_assert( 0 );
             return -1;
         }
         S->inputDelay = delay_matrix_dec[ rateID( Fs_Hz_in ) ][ rateID( Fs_Hz_out ) ];
@@ -151,7 +151,7 @@ opus_int silk_resampler_init(
             S->Coefs = silk_Resampler_1_6_COEFS;
         } else {
             /* None available */
-            silk_assert( 0 );
+            celt_assert( 0 );
             return -1;
         }
     } else {
@@ -181,9 +181,9 @@ opus_int silk_resampler(
     opus_int nSamples;
 
     /* Need at least 1 ms of input data */
-    silk_assert( inLen >= S->Fs_in_kHz );
+    celt_assert( inLen >= S->Fs_in_kHz );
     /* Delay can't exceed the 1 ms of buffering */
-    silk_assert( S->inputDelay <= S->Fs_in_kHz );
+    celt_assert( S->inputDelay <= S->Fs_in_kHz );
 
     nSamples = S->Fs_in_kHz - S->inputDelay;
 

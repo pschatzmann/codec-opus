@@ -8,11 +8,11 @@ this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the 
+- Neither the name of Internet Society, IETF or IETF Trust, nor the
 names of specific contributors, may be used to endorse or promote
 products derived from this software without specific prior written
 permission.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
 ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
@@ -51,7 +51,7 @@ void silk_decode_pitch(
             Lag_CB_ptr = &silk_CB_lags_stage2[ 0 ][ 0 ];
             cbk_size   = PE_NB_CBKS_STAGE2_EXT;
         } else {
-            silk_assert( nb_subfr == PE_MAX_NB_SUBFR >> 1 );
+            celt_assert( nb_subfr == PE_MAX_NB_SUBFR >> 1 );
             Lag_CB_ptr = &silk_CB_lags_stage2_10_ms[ 0 ][ 0 ];
             cbk_size   = PE_NB_CBKS_STAGE2_10MS;
         }
@@ -60,7 +60,7 @@ void silk_decode_pitch(
             Lag_CB_ptr = &silk_CB_lags_stage3[ 0 ][ 0 ];
             cbk_size   = PE_NB_CBKS_STAGE3_MAX;
         } else {
-            silk_assert( nb_subfr == PE_MAX_NB_SUBFR >> 1 );
+            celt_assert( nb_subfr == PE_MAX_NB_SUBFR >> 1 );
             Lag_CB_ptr = &silk_CB_lags_stage3_10_ms[ 0 ][ 0 ];
             cbk_size   = PE_NB_CBKS_STAGE3_10MS;
         }

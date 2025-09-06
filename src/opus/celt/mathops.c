@@ -1,6 +1,7 @@
 /* Copyright (c) 2002-2008 Jean-Marc Valin
    Copyright (c) 2007-2008 CSIRO
    Copyright (c) 2007-2009 Xiph.Org Foundation
+   Copyright (c) 2024 Arm Limited
    Written by Jean-Marc Valin */
 /**
    @file mathops.h
@@ -35,10 +36,12 @@
 #include "opus/config.h"
 #endif
 
+#include "float_cast.h"
 #include "mathops.h"
 
 /*Compute floor(sqrt(_val)) with exact arithmetic.
-  This has been tested on all possible 32-bit inputs.*/
+  _val must be greater than 0.
+  This has been tested on all possible 32-bit inputs greater than 0.*/
 unsigned isqrt32(opus_uint32 _val){
   unsigned b;
   unsigned g;
@@ -66,7 +69,7 @@ unsigned isqrt32(opus_uint32 _val){
 
 #ifdef FIXED_POINT
 
-opus_val32 frac_div32(opus_val32 a, opus_val32 b)
+opus_val32 frac_div32_q29(opus_val32 a, opus_val32 b)
 {
    opus_val16 rcp;
    opus_val32 result, rem;
@@ -78,6 +81,11 @@ opus_val32 frac_div32(opus_val32 a, opus_val32 b)
    result = MULT16_32_Q15(rcp, a);
    rem = PSHR32(a,2)-MULT32_32_Q31(result, b);
    result = ADD32(result, SHL32(MULT16_32_Q15(rcp, rem),2));
+   return result;
+}
+
+opus_val32 frac_div32(opus_val32 a, opus_val32 b) {
+   opus_val32 result = frac_div32_q29(a,b);
    if (result >= 536870912)       /*  2^29 */
       return 2147483647;          /*  2^31 - 1 */
    else if (result <= -536870912) /* -2^29 */
@@ -120,14 +128,19 @@ opus_val32 celt_sqrt(opus_val32 x)
    int k;
    opus_val16 n;
    opus_val32 rt;
-   static const opus_val16 C[5] = {23175, 11561, -3011, 1699, -664};
+   /* These coeffs are optimized in fixed-point to minimize both RMS and max error
+      of sqrt(x) over .25<x<1 without exceeding 32767.
+      The RMS error is 3.4e-5 and the max is 8.2e-5. */
+   static const opus_val16 C[6] = {23171, 11574, -2901, 1592, -1002, 336};
    if (x==0)
       return 0;
+   else if (x>=1073741824)
+      return 32767;
    k = (celt_ilog2(x)>>1)-7;
    x = VSHR32(x, 2*k);
    n = x-32768;
-   rt = ADD16(C[0], MULT16_16_Q15(n, ADD16(C[1], MULT16_16_Q15(n, ADD16(C[2],
-              MULT16_16_Q15(n, ADD16(C[3], MULT16_16_Q15(n, (C[4])))))))));
+   rt = ADD32(C[0], MULT16_16_Q15(n, ADD16(C[1], MULT16_16_Q15(n, ADD16(C[2],
+              MULT16_16_Q15(n, ADD16(C[3], MULT16_16_Q15(n, ADD16(C[4], MULT16_16_Q15(n, (C[5])))))))))));
    rt = VSHR32(rt,7-k);
    return rt;
 }
@@ -137,7 +150,7 @@ opus_val32 celt_sqrt(opus_val32 x)
 #define L3 8277
 #define L4 -626
 
-static inline opus_val16 _celt_cos_pi_2(opus_val16 x)
+static OPUS_INLINE opus_val16 _celt_cos_pi_2(opus_val16 x)
 {
    opus_val16 x2;
 
@@ -162,7 +175,7 @@ opus_val16 celt_cos_norm(opus_val32 x)
       {
          return _celt_cos_pi_2(EXTRACT16(x));
       } else {
-         return NEG32(_celt_cos_pi_2(EXTRACT16(65536-x)));
+         return NEG16(_celt_cos_pi_2(EXTRACT16(65536-x)));
       }
    } else {
       if (x&0x0000ffff)
@@ -180,7 +193,7 @@ opus_val32 celt_rcp(opus_val32 x)
    int i;
    opus_val16 n;
    opus_val16 r;
-   celt_assert2(x>0, "celt_rcp() only defined for positive values");
+   celt_sig_assert(x>0);
    i = celt_ilog2(x);
    /* n is Q15 with range [0,1). */
    n = VSHR32(x,i-15)-32768;
@@ -204,3 +217,36 @@ opus_val32 celt_rcp(opus_val32 x)
 }
 
 #endif
+
+#ifndef DISABLE_FLOAT_API
+
+void celt_float2int16_c(const float * OPUS_RESTRICT in, short * OPUS_RESTRICT out, int cnt)
+{
+   int i;
+   for (i = 0; i < cnt; i++)
+   {
+      out[i] = FLOAT2INT16(in[i]);
+   }
+}
+
+int opus_limit2_checkwithin1_c(float * samples, int cnt)
+{
+   int i;
+   if (cnt <= 0)
+   {
+      return 1;
+   }
+
+   for (i = 0; i < cnt; i++)
+   {
+      float clippedVal = samples[i];
+      clippedVal = FMAX(-2.0f, clippedVal);
+      clippedVal = FMIN(2.0f, clippedVal);
+      samples[i] = clippedVal;
+   }
+
+   /* C implementation can't provide quick hint. Assume it might exceed -1/+1. */
+   return 0;
+}
+
+#endif /* DISABLE_FLOAT_API */

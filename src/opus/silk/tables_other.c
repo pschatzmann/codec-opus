@@ -8,11 +8,11 @@ this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the 
+- Neither the name of Internet Society, IETF or IETF Trust, nor the
 names of specific contributors, may be used to endorse or promote
 products derived from this software without specific prior written
 permission.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
 ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
@@ -37,20 +37,6 @@ POSSIBILITY OF SUCH DAMAGE.
 extern "C"
 {
 #endif
-
-/* Piece-wise linear mapping from bitrate in kbps to coding quality in dB SNR */
-const opus_int32 silk_TargetRate_table_NB[ TARGET_RATE_TAB_SZ ] = {
-    0,      8000,   9400,   11500,  13500,  17500,  25000,  MAX_TARGET_RATE_BPS
-};
-const opus_int32 silk_TargetRate_table_MB[ TARGET_RATE_TAB_SZ ] = {
-    0,      9000,   12000,  14500,  18500,  24500,  35500,  MAX_TARGET_RATE_BPS
-};
-const opus_int32 silk_TargetRate_table_WB[ TARGET_RATE_TAB_SZ ] = {
-    0,      10500,  14000,  17000,  21500,  28500,  42000,  MAX_TARGET_RATE_BPS
-};
-const opus_int16 silk_SNR_table_Q1[ TARGET_RATE_TAB_SZ ] = {
-    18,     29,     38,     40,     46,     52,     62,     84
-};
 
 /* Tables for stereo predictor coding */
 const opus_int16 silk_stereo_pred_quant_Q13[ STEREO_QUANT_TAB_SIZE ] = {
@@ -135,4 +121,3 @@ const opus_int32 silk_Transition_LP_A_Q28[ TRANSITION_INT_NUM ][ TRANSITION_NA ]
 #ifdef __cplusplus
 }
 #endif
-

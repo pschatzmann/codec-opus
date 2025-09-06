@@ -42,15 +42,15 @@ extern "C" {
 #endif
 
 #ifdef CUSTOM_MODES
-#define OPUS_CUSTOM_EXPORT OPUS_EXPORT
-#define OPUS_CUSTOM_EXPORT_STATIC OPUS_EXPORT
+# define OPUS_CUSTOM_EXPORT OPUS_EXPORT
+# define OPUS_CUSTOM_EXPORT_STATIC OPUS_EXPORT
 #else
-#define OPUS_CUSTOM_EXPORT
-#ifdef CELT_C
-#define OPUS_CUSTOM_EXPORT_STATIC static inline
-#else
-#define OPUS_CUSTOM_EXPORT_STATIC
-#endif
+# define OPUS_CUSTOM_EXPORT
+# ifdef OPUS_BUILD
+#  define OPUS_CUSTOM_EXPORT_STATIC static OPUS_INLINE
+# else
+#  define OPUS_CUSTOM_EXPORT_STATIC
+# endif
 #endif
 
 /** @defgroup opus_custom Opus Custom
@@ -104,7 +104,8 @@ typedef struct OpusCustomDecoder OpusCustomDecoder;
 /** The mode contains all the information necessary to create an
     encoder. Both the encoder and decoder need to be initialized
     with exactly the same mode, otherwise the output will be
-    corrupted.
+    corrupted. The mode MUST NOT BE DESTROYED until the encoders and
+    decoders that use it are destroyed as well.
    @brief Mode configuration
  */
 typedef struct OpusCustomMode OpusCustomMode;
@@ -126,6 +127,9 @@ OPUS_CUSTOM_EXPORT OPUS_WARN_UNUSED_RESULT OpusCustomMode *opus_custom_mode_crea
   */
 OPUS_CUSTOM_EXPORT void opus_custom_mode_destroy(OpusCustomMode *mode);
 
+
+#if !defined(OPUS_BUILD) || defined(CELT_ENCODER_C)
+
 /* Encoder */
 /** Gets the size of an OpusCustomEncoder structure.
   * @param [in] mode <tt>OpusCustomMode *</tt>: Mode configuration
@@ -136,6 +140,28 @@ OPUS_CUSTOM_EXPORT_STATIC OPUS_WARN_UNUSED_RESULT int opus_custom_encoder_get_si
     const OpusCustomMode *mode,
     int channels
 ) OPUS_ARG_NONNULL(1);
+
+# ifdef CUSTOM_MODES
+/** Initializes a previously allocated encoder state
+  * The memory pointed to by st must be the size returned by opus_custom_encoder_get_size.
+  * This is intended for applications which use their own allocator instead of malloc.
+  * @see opus_custom_encoder_create(),opus_custom_encoder_get_size()
+  * To reset a previously initialized state use the OPUS_RESET_STATE CTL.
+  * @param [in] st <tt>OpusCustomEncoder*</tt>: Encoder state
+  * @param [in] mode <tt>OpusCustomMode *</tt>: Contains all the information about the characteristics of
+  *  the stream (must be the same characteristics as used for the
+  *  decoder)
+  * @param [in] channels <tt>int</tt>: Number of channels
+  * @return OPUS_OK Success or @ref opus_errorcodes
+  */
+OPUS_CUSTOM_EXPORT int opus_custom_encoder_init(
+    OpusCustomEncoder *st,
+    const OpusCustomMode *mode,
+    int channels
+) OPUS_ARG_NONNULL(1) OPUS_ARG_NONNULL(2);
+# endif
+#endif
+
 
 /** Creates a new encoder state. Each stream needs its own encoder
   * state (can't be shared across simultaneous streams).
@@ -152,25 +178,8 @@ OPUS_CUSTOM_EXPORT OPUS_WARN_UNUSED_RESULT OpusCustomEncoder *opus_custom_encode
     int *error
 ) OPUS_ARG_NONNULL(1);
 
-/** Initializes a previously allocated encoder state
-  * The memory pointed to by st must be the size returned by opus_custom_encoder_get_size.
-  * This is intended for applications which use their own allocator instead of malloc.
-  * @see opus_custom_encoder_create(),opus_custom_encoder_get_size()
-  * To reset a previously initialized state use the OPUS_RESET_STATE CTL.
-  * @param [in] st <tt>OpusCustomEncoder*</tt>: Encoder state
-  * @param [in] mode <tt>OpusCustomMode *</tt>: Contains all the information about the characteristics of
-  *  the stream (must be the same characteristics as used for the
-  *  decoder)
-  * @param [in] channels <tt>int</tt>: Number of channels
-  * @return OPUS_OK Success or @ref opus_errorcodes
-  */
-OPUS_CUSTOM_EXPORT_STATIC int opus_custom_encoder_init(
-    OpusCustomEncoder *st,
-    const OpusCustomMode *mode,
-    int channels
-) OPUS_ARG_NONNULL(1) OPUS_ARG_NONNULL(2);
 
-/** Destroys a an encoder state.
+/** Destroys an encoder state.
   * @param[in] st <tt>OpusCustomEncoder*</tt>: State to be freed.
   */
 OPUS_CUSTOM_EXPORT void opus_custom_encoder_destroy(OpusCustomEncoder *st);
@@ -221,6 +230,27 @@ OPUS_CUSTOM_EXPORT OPUS_WARN_UNUSED_RESULT int opus_custom_encode(
     int maxCompressedBytes
 ) OPUS_ARG_NONNULL(1) OPUS_ARG_NONNULL(2) OPUS_ARG_NONNULL(4);
 
+/** Encodes a frame of audio.
+  * @param [in] st <tt>OpusCustomEncoder*</tt>: Encoder state
+  * @param [in] pcm <tt>opus_int32*</tt>: PCM audio in signed 32-bit format (native endian) representing (or slightly exceeding) 24-bit values.
+  *          There must be exactly frame_size samples per channel.
+  * @param [in] frame_size <tt>int</tt>: Number of samples per frame of input signal
+  * @param [out] compressed <tt>char *</tt>: The compressed data is written here. This may not alias pcm and must be at least maxCompressedBytes long.
+  * @param [in] maxCompressedBytes <tt>int</tt>: Maximum number of bytes to use for compressing the frame
+  *          (can change from one frame to another)
+  * @return Number of bytes written to "compressed".
+  *       If negative, an error has occurred (see error codes). It is IMPORTANT that
+  *       the length returned be somehow transmitted to the decoder. Otherwise, no
+  *       decoding is possible.
+ */
+OPUS_CUSTOM_EXPORT OPUS_WARN_UNUSED_RESULT int opus_custom_encode24(
+    OpusCustomEncoder *st,
+    const opus_int32 *pcm,
+    int frame_size,
+    unsigned char *compressed,
+    int maxCompressedBytes
+) OPUS_ARG_NONNULL(1) OPUS_ARG_NONNULL(2) OPUS_ARG_NONNULL(4);
+
 /** Perform a CTL function on an Opus custom encoder.
   *
   * Generally the request and subsequent arguments are generated
@@ -229,6 +259,8 @@ OPUS_CUSTOM_EXPORT OPUS_WARN_UNUSED_RESULT int opus_custom_encode(
   */
 OPUS_CUSTOM_EXPORT int opus_custom_encoder_ctl(OpusCustomEncoder * OPUS_RESTRICT st, int request, ...) OPUS_ARG_NONNULL(1);
 
+
+#if !defined(OPUS_BUILD) || defined(CELT_DECODER_C)
 /* Decoder */
 
 /** Gets the size of an OpusCustomDecoder structure.
@@ -239,20 +271,6 @@ OPUS_CUSTOM_EXPORT int opus_custom_encoder_ctl(OpusCustomEncoder * OPUS_RESTRICT
 OPUS_CUSTOM_EXPORT_STATIC OPUS_WARN_UNUSED_RESULT int opus_custom_decoder_get_size(
     const OpusCustomMode *mode,
     int channels
-) OPUS_ARG_NONNULL(1);
-
-/** Creates a new decoder state. Each stream needs its own decoder state (can't
-  * be shared across simultaneous streams).
-  * @param [in] mode <tt>OpusCustomMode</tt>: Contains all the information about the characteristics of the
-  *          stream (must be the same characteristics as used for the encoder)
-  * @param [in] channels <tt>int</tt>: Number of channels
-  * @param [out] error <tt>int*</tt>: Returns an error code
-  * @return Newly created decoder state.
-  */
-OPUS_CUSTOM_EXPORT OPUS_WARN_UNUSED_RESULT OpusCustomDecoder *opus_custom_decoder_create(
-    const OpusCustomMode *mode,
-    int channels,
-    int *error
 ) OPUS_ARG_NONNULL(1);
 
 /** Initializes a previously allocated decoder state
@@ -273,7 +291,24 @@ OPUS_CUSTOM_EXPORT_STATIC int opus_custom_decoder_init(
     int channels
 ) OPUS_ARG_NONNULL(1) OPUS_ARG_NONNULL(2);
 
-/** Destroys a an decoder state.
+#endif
+
+
+/** Creates a new decoder state. Each stream needs its own decoder state (can't
+  * be shared across simultaneous streams).
+  * @param [in] mode <tt>OpusCustomMode</tt>: Contains all the information about the characteristics of the
+  *          stream (must be the same characteristics as used for the encoder)
+  * @param [in] channels <tt>int</tt>: Number of channels
+  * @param [out] error <tt>int*</tt>: Returns an error code
+  * @return Newly created decoder state.
+  */
+OPUS_CUSTOM_EXPORT OPUS_WARN_UNUSED_RESULT OpusCustomDecoder *opus_custom_decoder_create(
+    const OpusCustomMode *mode,
+    int channels,
+    int *error
+) OPUS_ARG_NONNULL(1);
+
+/** Destroys a decoder state.
   * @param[in] st <tt>OpusCustomDecoder*</tt>: State to be freed.
   */
 OPUS_CUSTOM_EXPORT void opus_custom_decoder_destroy(OpusCustomDecoder *st);
@@ -309,6 +344,23 @@ OPUS_CUSTOM_EXPORT OPUS_WARN_UNUSED_RESULT int opus_custom_decode(
     const unsigned char *data,
     int len,
     opus_int16 *pcm,
+    int frame_size
+) OPUS_ARG_NONNULL(1) OPUS_ARG_NONNULL(4);
+
+/** Decode an opus custom frame
+  * @param [in] st <tt>OpusCustomDecoder*</tt>: Decoder state
+  * @param [in] data <tt>char*</tt>: Input payload. Use a NULL pointer to indicate packet loss
+  * @param [in] len <tt>int</tt>: Number of bytes in payload
+  * @param [out] pcm <tt>opus_int32*</tt>: Output signal (interleaved if 2 channels) representing (or slightly exceeding) 24-bit values. length
+  *  is frame_size*channels*sizeof(opus_int32)
+  * @param [in] frame_size Number of samples per channel of available space in *pcm.
+  * @returns Number of decoded samples or @ref opus_errorcodes
+  */
+OPUS_CUSTOM_EXPORT OPUS_WARN_UNUSED_RESULT int opus_custom_decode24(
+    OpusCustomDecoder *st,
+    const unsigned char *data,
+    int len,
+    opus_int32 *pcm,
     int frame_size
 ) OPUS_ARG_NONNULL(1) OPUS_ARG_NONNULL(4);
 

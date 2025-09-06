@@ -8,11 +8,11 @@ this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the 
+- Neither the name of Internet Society, IETF or IETF Trust, nor the
 names of specific contributors, may be used to endorse or promote
 products derived from this software without specific prior written
 permission.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
 ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
@@ -77,6 +77,12 @@ typedef struct {
     /* I:   Flag to enable in-band Forward Error Correction (FEC); 0/1                      */
     opus_int useInBandFEC;
 
+    /* I:   Flag to enable in-band Deep REDundancy (DRED); 0/1                              */
+    opus_int useDRED;
+
+    /* I:   Flag to actually code in-band Forward Error Correction (FEC) in the current packet; 0/1 */
+    opus_int LBRR_coded;
+
     /* I:   Flag to enable discontinuous transmission (DTX); 0/1                            */
     opus_int useDTX;
 
@@ -91,6 +97,9 @@ typedef struct {
 
     /* I:   Opus encoder is allowing us to switch bandwidth                                 */
     opus_int opusCanSwitch;
+
+    /* I: Make frames as independent as possible (but still use LPC)                        */
+    opus_int reducedDependency;
 
     /* O:   Internal sampling rate used, in Hertz; 8000/12000/16000                         */
     opus_int32 internalSampleRate;
@@ -107,6 +116,11 @@ typedef struct {
     /* O:   Tells the Opus encoder we're ready to switch                                    */
     opus_int switchReady;
 
+    /* O: SILK Signal type */
+    opus_int signalType;
+
+    /* O: SILK offset (dithering) */
+    opus_int offset;
 } silk_EncControlStruct;
 
 /**************************************************************************/
@@ -130,6 +144,25 @@ typedef struct {
 
     /* O:   Pitch lag of previous frame (0 if unvoiced), measured in samples at 48 kHz      */
     opus_int prevPitchLag;
+
+    /* I:   Enable Deep PLC                                                                 */
+    opus_int enable_deep_plc;
+
+#ifdef ENABLE_OSCE
+    /* I: OSCE method */
+    opus_int osce_method;
+
+#ifdef ENABLE_OSCE_BWE
+    /* I: OSCE bandwidth extension method */
+    opus_int enable_osce_bwe;
+
+    /* I: extended mode */
+    opus_int osce_extended_mode;
+
+    /* O: previous extended mode */
+    opus_int prev_osce_extended_mode;
+#endif
+#endif
 } silk_DecControlStruct;
 
 #ifdef __cplusplus

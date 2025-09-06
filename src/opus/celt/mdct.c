@@ -53,74 +53,104 @@
 #include "mathops.h"
 #include "stack_alloc.h"
 
+#if defined(FIXED_POINT) && defined(__mips_dsp) && __mips == 32
+#include "mips/mdct_mipsr1.h"
+#endif
+
+#ifndef M_PI
+#define M_PI 3.141592653
+#endif
+
 #ifdef CUSTOM_MODES
 
-int clt_mdct_init(mdct_lookup *l,int N, int maxshift)
+int clt_mdct_init(mdct_lookup *l,int N, int maxshift, int arch)
 {
    int i;
-   int N4;
    kiss_twiddle_scalar *trig;
-#if defined(FIXED_POINT)
+   int shift;
    int N2=N>>1;
-#endif
    l->n = N;
-   N4 = N>>2;
    l->maxshift = maxshift;
    for (i=0;i<=maxshift;i++)
    {
       if (i==0)
-         l->kfft[i] = opus_fft_alloc(N>>2>>i, 0, 0);
+         l->kfft[i] = opus_fft_alloc(N>>2>>i, 0, 0, arch);
       else
-         l->kfft[i] = opus_fft_alloc_twiddles(N>>2>>i, 0, 0, l->kfft[0]);
+         l->kfft[i] = opus_fft_alloc_twiddles(N>>2>>i, 0, 0, l->kfft[0], arch);
 #ifndef ENABLE_TI_DSPLIB55
       if (l->kfft[i]==NULL)
          return 0;
 #endif
    }
-   l->trig = trig = (kiss_twiddle_scalar*)opus_alloc((N4+1)*sizeof(kiss_twiddle_scalar));
+   l->trig = trig = (kiss_twiddle_scalar*)opus_alloc((N-(N2>>maxshift))*sizeof(kiss_twiddle_scalar));
    if (l->trig==NULL)
      return 0;
-   /* We have enough points that sine isn't necessary */
+   for (shift=0;shift<=maxshift;shift++)
+   {
+      /* We have enough points that sine isn't necessary */
 #if defined(FIXED_POINT)
-   for (i=0;i<=N4;i++)
-      trig[i] = TRIG_UPSCALE*celt_cos_norm(DIV32(ADD32(SHL32(EXTEND32(i),17),N2),N));
+#ifndef ENABLE_QEXT
+      for (i=0;i<N2;i++)
+         trig[i] = TRIG_UPSCALE*celt_cos_norm(DIV32(ADD32(SHL32(EXTEND32(i),17),N2+16384),N));
 #else
-   for (i=0;i<=N4;i++)
-      trig[i] = (kiss_twiddle_scalar)cos(2*PI*i/N);
+      for (i=0;i<N2;i++)
+         trig[i] = (kiss_twiddle_scalar)MAX32(-2147483647,MIN32(2147483647,floor(.5+2147483648*cos(2*M_PI*(i+.125)/N))));
 #endif
+#else
+      for (i=0;i<N2;i++)
+         trig[i] = (kiss_twiddle_scalar)cos(2*PI*(i+.125)/N);
+#endif
+      trig += N2;
+      N2 >>= 1;
+      N >>= 1;
+   }
    return 1;
 }
 
-void clt_mdct_clear(mdct_lookup *l)
+void clt_mdct_clear(mdct_lookup *l, int arch)
 {
    int i;
    for (i=0;i<=l->maxshift;i++)
-      opus_fft_free(l->kfft[i]);
+      opus_fft_free(l->kfft[i], arch);
    opus_free((kiss_twiddle_scalar*)l->trig);
 }
 
 #endif /* CUSTOM_MODES */
 
 /* Forward MDCT trashes the input array */
-void clt_mdct_forward(const mdct_lookup *l, kiss_fft_scalar *in, kiss_fft_scalar * OPUS_RESTRICT out,
-      const opus_val16 *window, int overlap, int shift, int stride)
+#ifndef OVERRIDE_clt_mdct_forward
+void clt_mdct_forward_c(const mdct_lookup *l, kiss_fft_scalar *in, kiss_fft_scalar * OPUS_RESTRICT out,
+      const celt_coef *window, int overlap, int shift, int stride, int arch)
 {
    int i;
    int N, N2, N4;
-   kiss_twiddle_scalar sine;
    VARDECL(kiss_fft_scalar, f);
+   VARDECL(kiss_fft_cpx, f2);
+   const kiss_fft_state *st = l->kfft[shift];
+   const kiss_twiddle_scalar *trig;
+   celt_coef scale;
+#ifdef FIXED_POINT
+   /* Allows us to scale with MULT16_32_Q16(), which is faster than
+      MULT16_32_Q15() on ARM. */
+   int scale_shift = st->scale_shift-1;
+   int headroom;
+#endif
    SAVE_STACK;
+   (void)arch;
+   scale = st->scale;
+
    N = l->n;
-   N >>= shift;
+   trig = l->trig;
+   for (i=0;i<shift;i++)
+   {
+      N >>= 1;
+      trig += N;
+   }
    N2 = N>>1;
    N4 = N>>2;
+
    ALLOC(f, N2, kiss_fft_scalar);
-   /* sin(x) ~= x here */
-#ifdef FIXED_POINT
-   sine = TRIG_UPSCALE*(QCONST16(0.7853981f, 15)+N2)/N;
-#else
-   sine = (kiss_twiddle_scalar)2*PI*(.125f)/N;
-#endif
+   ALLOC(f2, N4, kiss_fft_cpx);
 
    /* Consider the input to be composed of four blocks: [a, b, c, d] */
    /* Window, shuffle, fold */
@@ -129,13 +159,13 @@ void clt_mdct_forward(const mdct_lookup *l, kiss_fft_scalar *in, kiss_fft_scalar
       const kiss_fft_scalar * OPUS_RESTRICT xp1 = in+(overlap>>1);
       const kiss_fft_scalar * OPUS_RESTRICT xp2 = in+N2-1+(overlap>>1);
       kiss_fft_scalar * OPUS_RESTRICT yp = f;
-      const opus_val16 * OPUS_RESTRICT wp1 = window+(overlap>>1);
-      const opus_val16 * OPUS_RESTRICT wp2 = window+(overlap>>1)-1;
-      for(i=0;i<(overlap>>2);i++)
+      const celt_coef * OPUS_RESTRICT wp1 = window+(overlap>>1);
+      const celt_coef * OPUS_RESTRICT wp2 = window+(overlap>>1)-1;
+      for(i=0;i<((overlap+3)>>2);i++)
       {
          /* Real part arranged as -d-cR, Imag part arranged as -b+aR*/
-         *yp++ = MULT16_32_Q15(*wp2, xp1[N2]) + MULT16_32_Q15(*wp1,*xp2);
-         *yp++ = MULT16_32_Q15(*wp1, *xp1)    - MULT16_32_Q15(*wp2, xp2[-N2]);
+         *yp++ = S_MUL(xp1[N2], *wp2) + S_MUL(*xp2, *wp1);
+         *yp++ = S_MUL(*xp1, *wp1)    - S_MUL(xp2[-N2], *wp2);
          xp1+=2;
          xp2-=2;
          wp1+=2;
@@ -143,7 +173,7 @@ void clt_mdct_forward(const mdct_lookup *l, kiss_fft_scalar *in, kiss_fft_scalar
       }
       wp1 = window;
       wp2 = window+overlap-1;
-      for(;i<N4-(overlap>>2);i++)
+      for(;i<N4-((overlap+3)>>2);i++)
       {
          /* Real part arranged as a-bR, Imag part arranged as -c-dR */
          *yp++ = *xp2;
@@ -154,8 +184,8 @@ void clt_mdct_forward(const mdct_lookup *l, kiss_fft_scalar *in, kiss_fft_scalar
       for(;i<N4;i++)
       {
          /* Real part arranged as a-bR, Imag part arranged as -c-dR */
-         *yp++ =  -MULT16_32_Q15(*wp1, xp1[-N2]) + MULT16_32_Q15(*wp2, *xp2);
-         *yp++ = MULT16_32_Q15(*wp2, *xp1)     + MULT16_32_Q15(*wp1, xp2[N2]);
+         *yp++ =  -S_MUL(xp1[-N2], *wp1) + S_MUL(*xp2, *wp2);
+         *yp++ = S_MUL(*xp1, *wp2)     + S_MUL(xp2[N2], *wp1);
          xp1+=2;
          xp2-=2;
          wp1+=2;
@@ -165,168 +195,196 @@ void clt_mdct_forward(const mdct_lookup *l, kiss_fft_scalar *in, kiss_fft_scalar
    /* Pre-rotation */
    {
       kiss_fft_scalar * OPUS_RESTRICT yp = f;
-      const kiss_twiddle_scalar *t = &l->trig[0];
+      const kiss_twiddle_scalar *t = &trig[0];
+#ifdef FIXED_POINT
+      opus_val32 maxval=1;
+#endif
       for(i=0;i<N4;i++)
       {
+         kiss_fft_cpx yc;
+         kiss_twiddle_scalar t0, t1;
          kiss_fft_scalar re, im, yr, yi;
-         re = yp[0];
-         im = yp[1];
-         yr = -S_MUL(re,t[i<<shift])  -  S_MUL(im,t[(N4-i)<<shift]);
-         yi = -S_MUL(im,t[i<<shift])  +  S_MUL(re,t[(N4-i)<<shift]);
-         /* works because the cos is nearly one */
-         *yp++ = yr + S_MUL(yi,sine);
-         *yp++ = yi - S_MUL(yr,sine);
+         t0 = t[i];
+         t1 = t[N4+i];
+         re = *yp++;
+         im = *yp++;
+         yr = S_MUL(re,t0)  -  S_MUL(im,t1);
+         yi = S_MUL(im,t0)  +  S_MUL(re,t1);
+         /* For QEXT, it's best to scale before the FFT, but otherwise it's best to scale after.
+            For floating-point it doesn't matter. */
+#ifdef ENABLE_QEXT
+         yc.r = yr;
+         yc.i = yi;
+#else
+         yc.r = S_MUL2(yr, scale);
+         yc.i = S_MUL2(yi, scale);
+#endif
+#ifdef FIXED_POINT
+         maxval = MAX32(maxval, MAX32(ABS32(yc.r), ABS32(yc.i)));
+#endif
+         f2[st->bitrev[i]] = yc;
       }
+#ifdef FIXED_POINT
+      headroom = IMAX(0, IMIN(scale_shift, 28-celt_ilog2(maxval)));
+#endif
    }
 
-   /* N/4 complex FFT, down-scales by 4/N */
-   opus_fft(l->kfft[shift], (kiss_fft_cpx *)f, (kiss_fft_cpx *)in);
+   /* N/4 complex FFT, does not downscale anymore */
+   opus_fft_impl(st, f2 ARG_FIXED(scale_shift-headroom));
 
    /* Post-rotate */
    {
       /* Temp pointers to make it really clear to the compiler what we're doing */
-      const kiss_fft_scalar * OPUS_RESTRICT fp = in;
+      const kiss_fft_cpx * OPUS_RESTRICT fp = f2;
       kiss_fft_scalar * OPUS_RESTRICT yp1 = out;
       kiss_fft_scalar * OPUS_RESTRICT yp2 = out+stride*(N2-1);
-      const kiss_twiddle_scalar *t = &l->trig[0];
+      const kiss_twiddle_scalar *t = &trig[0];
       /* Temp pointers to make it really clear to the compiler what we're doing */
       for(i=0;i<N4;i++)
       {
          kiss_fft_scalar yr, yi;
-         yr = S_MUL(fp[1],t[(N4-i)<<shift]) + S_MUL(fp[0],t[i<<shift]);
-         yi = S_MUL(fp[0],t[(N4-i)<<shift]) - S_MUL(fp[1],t[i<<shift]);
-         /* works because the cos is nearly one */
-         *yp1 = yr - S_MUL(yi,sine);
-         *yp2 = yi + S_MUL(yr,sine);;
-         fp += 2;
+         kiss_fft_scalar t0, t1;
+#ifdef ENABLE_QEXT
+         t0 = S_MUL2(t[i], scale);
+         t1 = S_MUL2(t[N4+i], scale);
+#else
+         t0 = t[i];
+         t1 = t[N4+i];
+#endif
+         yr = PSHR32(S_MUL(fp->i,t1) - S_MUL(fp->r,t0), headroom);
+         yi = PSHR32(S_MUL(fp->r,t1) + S_MUL(fp->i,t0), headroom);
+         *yp1 = yr;
+         *yp2 = yi;
+         fp++;
          yp1 += 2*stride;
          yp2 -= 2*stride;
       }
    }
    RESTORE_STACK;
 }
+#endif /* OVERRIDE_clt_mdct_forward */
 
-void clt_mdct_backward(const mdct_lookup *l, kiss_fft_scalar *in, kiss_fft_scalar * OPUS_RESTRICT out,
-      const opus_val16 * OPUS_RESTRICT window, int overlap, int shift, int stride)
+#ifndef OVERRIDE_clt_mdct_backward
+void clt_mdct_backward_c(const mdct_lookup *l, kiss_fft_scalar *in, kiss_fft_scalar * OPUS_RESTRICT out,
+      const celt_coef * OPUS_RESTRICT window, int overlap, int shift, int stride, int arch)
 {
    int i;
    int N, N2, N4;
-   kiss_twiddle_scalar sine;
-   VARDECL(kiss_fft_scalar, f);
-   VARDECL(kiss_fft_scalar, f2);
-   SAVE_STACK;
+   const kiss_twiddle_scalar *trig;
+#ifdef FIXED_POINT
+   int pre_shift, post_shift, fft_shift;
+#endif
+   (void) arch;
+
    N = l->n;
-   N >>= shift;
+   trig = l->trig;
+   for (i=0;i<shift;i++)
+   {
+      N >>= 1;
+      trig += N;
+   }
    N2 = N>>1;
    N4 = N>>2;
-   ALLOC(f, N2, kiss_fft_scalar);
-   ALLOC(f2, N2, kiss_fft_scalar);
-   /* sin(x) ~= x here */
-#ifdef FIXED_POINT
-   sine = TRIG_UPSCALE*(QCONST16(0.7853981f, 15)+N2)/N;
-#else
-   sine = (kiss_twiddle_scalar)2*PI*(.125f)/N;
-#endif
 
+#ifdef FIXED_POINT
+   {
+      opus_val32 sumval=N2;
+      opus_val32 maxval=0;
+      for (i=0;i<N2;i++) {
+         maxval = MAX32(maxval, ABS32(in[i*stride]));
+         sumval = ADD32_ovflw(sumval, ABS32(SHR32(in[i*stride],11)));
+      }
+      pre_shift = IMAX(0, 29-celt_zlog2(1+maxval));
+      /* Worst-case where all the energy goes to a single sample. */
+      post_shift = IMAX(0, 19-celt_ilog2(ABS32(sumval)));
+      post_shift = IMIN(post_shift, pre_shift);
+      fft_shift = pre_shift - post_shift;
+   }
+#endif
    /* Pre-rotate */
    {
       /* Temp pointers to make it really clear to the compiler what we're doing */
       const kiss_fft_scalar * OPUS_RESTRICT xp1 = in;
       const kiss_fft_scalar * OPUS_RESTRICT xp2 = in+stride*(N2-1);
-      kiss_fft_scalar * OPUS_RESTRICT yp = f2;
-      const kiss_twiddle_scalar *t = &l->trig[0];
+      kiss_fft_scalar * OPUS_RESTRICT yp = out+(overlap>>1);
+      const kiss_twiddle_scalar * OPUS_RESTRICT t = &trig[0];
+      const opus_int16 * OPUS_RESTRICT bitrev = l->kfft[shift]->bitrev;
       for(i=0;i<N4;i++)
       {
+         int rev;
          kiss_fft_scalar yr, yi;
-         yr = -S_MUL(*xp2, t[i<<shift]) + S_MUL(*xp1,t[(N4-i)<<shift]);
-         yi =  -S_MUL(*xp2, t[(N4-i)<<shift]) - S_MUL(*xp1,t[i<<shift]);
-         /* works because the cos is nearly one */
-         *yp++ = yr - S_MUL(yi,sine);
-         *yp++ = yi + S_MUL(yr,sine);
+         opus_val32 x1, x2;
+         rev = *bitrev++;
+         x1 = SHL32_ovflw(*xp1, pre_shift);
+         x2 = SHL32_ovflw(*xp2, pre_shift);
+         yr = ADD32_ovflw(S_MUL(x2, t[i]), S_MUL(x1, t[N4+i]));
+         yi = SUB32_ovflw(S_MUL(x1, t[i]), S_MUL(x2, t[N4+i]));
+         /* We swap real and imag because we use an FFT instead of an IFFT. */
+         yp[2*rev+1] = yr;
+         yp[2*rev] = yi;
+         /* Storing the pre-rotation directly in the bitrev order. */
          xp1+=2*stride;
          xp2-=2*stride;
       }
    }
 
-   /* Inverse N/4 complex FFT. This one should *not* downscale even in fixed-point */
-   opus_ifft(l->kfft[shift], (kiss_fft_cpx *)f2, (kiss_fft_cpx *)f);
+   opus_fft_impl(l->kfft[shift], (kiss_fft_cpx*)(out+(overlap>>1)) ARG_FIXED(fft_shift));
 
-   /* Post-rotate */
+   /* Post-rotate and de-shuffle from both ends of the buffer at once to make
+      it in-place. */
    {
-      kiss_fft_scalar * OPUS_RESTRICT fp = f;
-      const kiss_twiddle_scalar *t = &l->trig[0];
-
-      for(i=0;i<N4;i++)
+      kiss_fft_scalar * yp0 = out+(overlap>>1);
+      kiss_fft_scalar * yp1 = out+(overlap>>1)+N2-2;
+      const kiss_twiddle_scalar *t = &trig[0];
+      /* Loop to (N4+1)>>1 to handle odd N4. When N4 is odd, the
+         middle pair will be computed twice. */
+      for(i=0;i<(N4+1)>>1;i++)
       {
          kiss_fft_scalar re, im, yr, yi;
-         re = fp[0];
-         im = fp[1];
+         kiss_twiddle_scalar t0, t1;
+         /* We swap real and imag because we're using an FFT instead of an IFFT. */
+         re = yp0[1];
+         im = yp0[0];
+         t0 = t[i];
+         t1 = t[N4+i];
          /* We'd scale up by 2 here, but instead it's done when mixing the windows */
-         yr = S_MUL(re,t[i<<shift]) - S_MUL(im,t[(N4-i)<<shift]);
-         yi = S_MUL(im,t[i<<shift]) + S_MUL(re,t[(N4-i)<<shift]);
-         /* works because the cos is nearly one */
-         *fp++ = yr - S_MUL(yi,sine);
-         *fp++ = yi + S_MUL(yr,sine);
+         yr = PSHR32_ovflw(ADD32_ovflw(S_MUL(re,t0), S_MUL(im,t1)), post_shift);
+         yi = PSHR32_ovflw(SUB32_ovflw(S_MUL(re,t1), S_MUL(im,t0)), post_shift);
+         /* We swap real and imag because we're using an FFT instead of an IFFT. */
+         re = yp1[1];
+         im = yp1[0];
+         yp0[0] = yr;
+         yp1[1] = yi;
+
+         t0 = t[(N4-i-1)];
+         t1 = t[(N2-i-1)];
+         /* We'd scale up by 2 here, but instead it's done when mixing the windows */
+         yr = PSHR32_ovflw(ADD32_ovflw(S_MUL(re,t0), S_MUL(im,t1)), post_shift);
+         yi = PSHR32_ovflw(SUB32_ovflw(S_MUL(re,t1), S_MUL(im,t0)), post_shift);
+         yp1[0] = yr;
+         yp0[1] = yi;
+         yp0 += 2;
+         yp1 -= 2;
       }
    }
-   /* De-shuffle the components for the middle of the window only */
-   {
-      const kiss_fft_scalar * OPUS_RESTRICT fp1 = f;
-      const kiss_fft_scalar * OPUS_RESTRICT fp2 = f+N2-1;
-      kiss_fft_scalar * OPUS_RESTRICT yp = f2;
-      for(i = 0; i < N4; i++)
-      {
-         *yp++ =-*fp1;
-         *yp++ = *fp2;
-         fp1 += 2;
-         fp2 -= 2;
-      }
-   }
-   out -= (N2-overlap)>>1;
+
    /* Mirror on both sides for TDAC */
    {
-      kiss_fft_scalar * OPUS_RESTRICT fp1 = f2+N4-1;
-      kiss_fft_scalar * OPUS_RESTRICT xp1 = out+N2-1;
-      kiss_fft_scalar * OPUS_RESTRICT yp1 = out+N4-overlap/2;
-      const opus_val16 * OPUS_RESTRICT wp1 = window;
-      const opus_val16 * OPUS_RESTRICT wp2 = window+overlap-1;
-      for(i = 0; i< N4-overlap/2; i++)
+      kiss_fft_scalar * OPUS_RESTRICT xp1 = out+overlap-1;
+      kiss_fft_scalar * OPUS_RESTRICT yp1 = out;
+      const celt_coef * OPUS_RESTRICT wp1 = window;
+      const celt_coef * OPUS_RESTRICT wp2 = window+overlap-1;
+
+      for(i = 0; i < overlap/2; i++)
       {
-         *xp1 = *fp1;
-         xp1--;
-         fp1--;
-      }
-      for(; i < N4; i++)
-      {
-         kiss_fft_scalar x1;
-         x1 = *fp1--;
-         *yp1++ +=-MULT16_32_Q15(*wp1, x1);
-         *xp1-- += MULT16_32_Q15(*wp2, x1);
+         kiss_fft_scalar x1, x2;
+         x1 = *xp1;
+         x2 = *yp1;
+         *yp1++ = SUB32_ovflw(S_MUL(x2, *wp2), S_MUL(x1, *wp1));
+         *xp1-- = ADD32_ovflw(S_MUL(x2, *wp1), S_MUL(x1, *wp2));
          wp1++;
          wp2--;
       }
    }
-   {
-      kiss_fft_scalar * OPUS_RESTRICT fp2 = f2+N4;
-      kiss_fft_scalar * OPUS_RESTRICT xp2 = out+N2;
-      kiss_fft_scalar * OPUS_RESTRICT yp2 = out+N-1-(N4-overlap/2);
-      const opus_val16 * OPUS_RESTRICT wp1 = window;
-      const opus_val16 * OPUS_RESTRICT wp2 = window+overlap-1;
-      for(i = 0; i< N4-overlap/2; i++)
-      {
-         *xp2 = *fp2;
-         xp2++;
-         fp2++;
-      }
-      for(; i < N4; i++)
-      {
-         kiss_fft_scalar x2;
-         x2 = *fp2++;
-         *yp2--  = MULT16_32_Q15(*wp1, x2);
-         *xp2++  = MULT16_32_Q15(*wp2, x2);
-         wp1++;
-         wp2--;
-      }
-   }
-   RESTORE_STACK;
 }
+#endif /* OVERRIDE_clt_mdct_backward */
