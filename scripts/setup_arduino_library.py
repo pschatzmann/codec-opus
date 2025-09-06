@@ -68,15 +68,6 @@ def setup_opus():
     if not os.path.exists(dest_dir):
         os.makedirs(dest_dir)
 
-    original_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../original'))
-    opus_dir = os.path.join(original_dir, 'opus')
-    if not os.path.exists(opus_dir):
-        print(f"Cloning opus repository into {original_dir}...")
-        subprocess.run(["git", "clone", "https://github.com/xiph/opus.git", opus_dir], check=True)
-    # else:
-    #     print(f"Updating opus repository in {opus_dir}...")
-    #     subprocess.run(["git", "-C", opus_dir, "pull"], check=True)
-
     # Source directory for includes
     include_src = os.path.abspath(os.path.join(os.path.dirname(__file__), '../original/opus/include'))
     # Destination directory
