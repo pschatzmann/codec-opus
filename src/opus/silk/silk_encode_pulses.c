@@ -1,29 +1,33 @@
 /***********************************************************************
-Copyright (c) 2006-2011, Skype Limited. All rights reserved. 
-Redistribution and use in source and binary forms, with or without 
-modification, (subject to the limitations in the disclaimer below) 
+Copyright (c) 2006-2011, Skype Limited. All rights reserved.
+Redistribution and use in source and binary forms, with or without
+modification, (subject to the limitations in the disclaimer below)
 are permitted provided that the following conditions are met:
 - Redistributions of source code must retain the above copyright notice,
 this list of conditions and the following disclaimer.
-- Redistributions in binary form must reproduce the above copyright 
-notice, this list of conditions and the following disclaimer in the 
+- Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Skype Limited, nor the names of specific 
-contributors, may be used to endorse or promote products derived from 
+- Neither the name of Skype Limited, nor the names of specific
+contributors, may be used to endorse or promote products derived from
 this software without specific prior written permission.
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED 
-BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND 
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
 CONTRIBUTORS ''AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
-BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND 
-FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
-COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
+BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
-NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF 
-USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON 
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***********************************************************************/
+
+#if defined(HAVE_CONFIG_H) || defined(ARDUINO)
+#include "opus/config.h"
+#endif
 
 #include "silk_main.h"
 
@@ -31,14 +35,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /* Encode quantization indices of excitation */
 /*********************************************/
 
-SKP_INLINE SKP_int combine_and_check(       /* return ok */
-    SKP_int         *pulses_comb,           /* O */
-    const SKP_int   *pulses_in,             /* I */
-    SKP_int         max_pulses,             /* I    max value for sum of pulses */
-    SKP_int         len                     /* I    number of output values */
-) 
+static inline opus_int combine_and_check(       /* return ok */
+    opus_int         *pulses_comb,           /* O */
+    const opus_int   *pulses_in,             /* I */
+    opus_int         max_pulses,             /* I    max value for sum of pulses */
+    opus_int         len                     /* I    number of output values */
+)
 {
-    SKP_int k, sum;
+    opus_int k, sum;
 
     for( k = 0; k < len; k++ ) {
         sum = pulses_in[ 2 * k ] + pulses_in[ 2 * k + 1 ];
@@ -54,24 +58,24 @@ SKP_INLINE SKP_int combine_and_check(       /* return ok */
 /* Encode quantization indices of excitation */
 void silk_encode_pulses(
     ec_enc                      *psRangeEnc,        /* I/O  compressor data structure                   */
-    const SKP_int               signalType,         /* I    Sigtype                                     */
-    const SKP_int               quantOffsetType,    /* I    quantOffsetType                             */
-    SKP_int8                    pulses[],           /* I    quantization indices                        */
-    const SKP_int               frame_length        /* I    Frame length                                */
+    const opus_int               signalType,         /* I    Sigtype                                     */
+    const opus_int               quantOffsetType,    /* I    quantOffsetType                             */
+    opus_int8                    pulses[],           /* I    quantization indices                        */
+    const opus_int               frame_length        /* I    Frame length                                */
 )
 {
-    SKP_int   i, k, j, iter, bit, nLS, scale_down, RateLevelIndex = 0;
-    SKP_int32 abs_q, minSumBits_Q5, sumBits_Q5;
-    SKP_int   abs_pulses[ MAX_FRAME_LENGTH ];
-    SKP_int   sum_pulses[ MAX_NB_SHELL_BLOCKS ];
-    SKP_int   nRshifts[   MAX_NB_SHELL_BLOCKS ];
-    SKP_int   pulses_comb[ 8 ];
-    SKP_int   *abs_pulses_ptr;
-    const SKP_int8 *pulses_ptr;
-    const SKP_uint8 *cdf_ptr;
-    const SKP_uint8 *nBits_ptr;
+    opus_int   i, k, j, iter, bit, nLS, scale_down, RateLevelIndex = 0;
+    opus_int32 abs_q, minSumBits_Q5, sumBits_Q5;
+    opus_int   abs_pulses[ MAX_FRAME_LENGTH ];
+    opus_int   sum_pulses[ MAX_NB_SHELL_BLOCKS ];
+    opus_int   nRshifts[   MAX_NB_SHELL_BLOCKS ];
+    opus_int   pulses_comb[ 8 ];
+    opus_int   *abs_pulses_ptr;
+    const opus_int8 *pulses_ptr;
+    const opus_uint8 *cdf_ptr;
+    const opus_uint8 *nBits_ptr;
 
-    SKP_memset( pulses_comb, 0, 8 * sizeof( SKP_int ) ); // Fixing Valgrind reported problem
+    SKP_memset( pulses_comb, 0, 8 * sizeof( opus_int ) ); // Fixing Valgrind reported problem
 
     /****************************/
     /* Prepare for shell coding */
@@ -82,15 +86,15 @@ void silk_encode_pulses(
     if( iter * SHELL_CODEC_FRAME_LENGTH < frame_length ){
         SKP_assert( frame_length == 12 * 10 ); /* Make sure only happens for 10 ms @ 12 kHz */
         iter++;
-        SKP_memset( &pulses[ frame_length ], 0, SHELL_CODEC_FRAME_LENGTH * sizeof(SKP_int8));
+        SKP_memset( &pulses[ frame_length ], 0, SHELL_CODEC_FRAME_LENGTH * sizeof(opus_int8));
     }
 
     /* Take the absolute value of the pulses */
     for( i = 0; i < iter * SHELL_CODEC_FRAME_LENGTH; i+=4 ) {
-        abs_pulses[i+0] = ( SKP_int )SKP_abs( pulses[ i + 0 ] );
-        abs_pulses[i+1] = ( SKP_int )SKP_abs( pulses[ i + 1 ] );
-        abs_pulses[i+2] = ( SKP_int )SKP_abs( pulses[ i + 2 ] );
-        abs_pulses[i+3] = ( SKP_int )SKP_abs( pulses[ i + 3 ] );
+        abs_pulses[i+0] = ( opus_int )SKP_abs( pulses[ i + 0 ] );
+        abs_pulses[i+1] = ( opus_int )SKP_abs( pulses[ i + 1 ] );
+        abs_pulses[i+2] = ( opus_int )SKP_abs( pulses[ i + 2 ] );
+        abs_pulses[i+3] = ( opus_int )SKP_abs( pulses[ i + 3 ] );
     }
 
     /* Calc sum pulses per shell code frame */
@@ -110,7 +114,7 @@ void silk_encode_pulses(
 
             if( scale_down ) {
                 /* We need to downscale the quantization signal */
-                nRshifts[ i ]++;                
+                nRshifts[ i ]++;
                 for( k = 0; k < SHELL_CODEC_FRAME_LENGTH; k++ ) {
                     abs_pulses_ptr[ k ] = SKP_RSHIFT( abs_pulses_ptr[ k ], 1 );
                 }
@@ -177,7 +181,7 @@ void silk_encode_pulses(
             pulses_ptr = &pulses[ i * SHELL_CODEC_FRAME_LENGTH ];
             nLS = nRshifts[ i ] - 1;
             for( k = 0; k < SHELL_CODEC_FRAME_LENGTH; k++ ) {
-                abs_q = (SKP_int8)SKP_abs( pulses_ptr[ k ] );
+                abs_q = (opus_int8)SKP_abs( pulses_ptr[ k ] );
                 for( j = nLS; j > 0; j-- ) {
                     bit = SKP_RSHIFT( abs_q, j ) & 1;
                     ec_enc_icdf( psRangeEnc, bit, silk_lsb_iCDF, 8 );

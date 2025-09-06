@@ -25,6 +25,15 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#if defined(HAVE_CONFIG_H) || defined(ARDUINO)
+#include "opus/config.h"
+#endif
+
+#include "opus.h"
+
+#ifndef OPUS_VERSION
+#define OPUS_VERSION "unknown"
+#endif
 
 const char *opus_strerror(int error)
 {
@@ -42,4 +51,13 @@ const char *opus_strerror(int error)
       return "unknown error";
    else
       return error_strings[-error];
+}
+
+const char *opus_get_version_string(void)
+{
+	return "libopus " OPUS_VERSION
+#ifdef FUZZING
+	      "-fuzzing"
+#endif
+	      ;
 }

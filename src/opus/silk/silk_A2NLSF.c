@@ -1,27 +1,27 @@
 /***********************************************************************
-Copyright (c) 2006-2011, Skype Limited. All rights reserved. 
-Redistribution and use in source and binary forms, with or without 
-modification, (subject to the limitations in the disclaimer below) 
+Copyright (c) 2006-2011, Skype Limited. All rights reserved.
+Redistribution and use in source and binary forms, with or without
+modification, (subject to the limitations in the disclaimer below)
 are permitted provided that the following conditions are met:
 - Redistributions of source code must retain the above copyright notice,
 this list of conditions and the following disclaimer.
-- Redistributions in binary form must reproduce the above copyright 
-notice, this list of conditions and the following disclaimer in the 
+- Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Skype Limited, nor the names of specific 
-contributors, may be used to endorse or promote products derived from 
+- Neither the name of Skype Limited, nor the names of specific
+contributors, may be used to endorse or promote products derived from
 this software without specific prior written permission.
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED 
-BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND 
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
 CONTRIBUTORS ''AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
-BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND 
-FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
-COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
+BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
-NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF 
-USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON 
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***********************************************************************/
 
@@ -30,6 +30,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /* A piecewise linear approximation maps LSF <-> cos(LSF)       */
 /* Therefore the result is not accurate NLSFs, but the two      */
 /* functions are accurate inverses of each other                */
+
+#if defined(HAVE_CONFIG_H) || defined(ARDUINO)
+#include "opus/config.h"
+#endif
 
 #include "silk_SigProc_FIX.h"
 #include "silk_tables.h"
@@ -44,30 +48,30 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /* Helper function for A2NLSF(..)                    */
 /* Transforms polynomials from cos(n*f) to cos(f)^n  */
-SKP_INLINE void silk_A2NLSF_trans_poly(
-    SKP_int32        *p,    /* I/O    Polynomial                                */
-    const SKP_int    dd     /* I      Polynomial order (= filter order / 2 )    */
+static inline void silk_A2NLSF_trans_poly(
+    opus_int32        *p,    /* I/O    Polynomial                                */
+    const opus_int    dd     /* I      Polynomial order (= filter order / 2 )    */
 )
 {
-    SKP_int k, n;
-    
+    opus_int k, n;
+
     for( k = 2; k <= dd; k++ ) {
         for( n = dd; n > k; n-- ) {
             p[ n - 2 ] -= p[ n ];
         }
         p[ k - 2 ] -= SKP_LSHIFT( p[ k ], 1 );
     }
-}    
+}
 /* Helper function for A2NLSF(..)                    */
 /* Polynomial evaluation                             */
-SKP_INLINE SKP_int32 silk_A2NLSF_eval_poly(    /* return the polynomial evaluation, in QPoly */
-    SKP_int32        *p,    /* I    Polynomial, QPoly        */
-    const SKP_int32   x,    /* I    Evaluation point, Q12    */
-    const SKP_int    dd     /* I    Order                    */
+static inline opus_int32 silk_A2NLSF_eval_poly(    /* return the polynomial evaluation, in QPoly */
+    opus_int32        *p,    /* I    Polynomial, QPoly        */
+    const opus_int32   x,    /* I    Evaluation point, Q12    */
+    const opus_int    dd     /* I    Order                    */
 )
 {
-    SKP_int   n;
-    SKP_int32 x_Q16, y32;
+    opus_int   n;
+    opus_int32 x_Q16, y32;
 
     y32 = p[ dd ];                                    /* QPoly */
     x_Q16 = SKP_LSHIFT( x, 4 );
@@ -77,14 +81,14 @@ SKP_INLINE SKP_int32 silk_A2NLSF_eval_poly(    /* return the polynomial evaluati
     return y32;
 }
 
-SKP_INLINE void silk_A2NLSF_init(
-     const SKP_int32    *a_Q16,
-     SKP_int32          *P, 
-     SKP_int32          *Q, 
-     const SKP_int      dd
-) 
+static inline void silk_A2NLSF_init(
+     const opus_int32    *a_Q16,
+     opus_int32          *P,
+     opus_int32          *Q,
+     const opus_int      dd
+)
 {
-    SKP_int k;
+    opus_int k;
 
     /* Convert filter coefs to even and odd polynomials */
     P[dd] = SKP_LSHIFT( 1, QPoly );
@@ -106,8 +110,8 @@ SKP_INLINE void silk_A2NLSF_init(
     /* z =  1 is always a root in Q, and                        */
     /* z = -1 is always a root in P                             */
     for( k = dd; k > 0; k-- ) {
-        P[ k - 1 ] -= P[ k ]; 
-        Q[ k - 1 ] += Q[ k ]; 
+        P[ k - 1 ] -= P[ k ];
+        Q[ k - 1 ] += Q[ k ];
     }
 
     /* Transform polynomials from cos(n*f) to cos(f)^n */
@@ -118,19 +122,19 @@ SKP_INLINE void silk_A2NLSF_init(
 /* Compute Normalized Line Spectral Frequencies (NLSFs) from whitening filter coefficients        */
 /* If not all roots are found, the a_Q16 coefficients are bandwidth expanded until convergence.    */
 void silk_A2NLSF(
-    SKP_int16        *NLSF,                 /* O    Normalized Line Spectral Frequencies, Q15 (0 - (2^15-1)), [d]    */
-    SKP_int32        *a_Q16,                /* I/O  Monic whitening filter coefficients in Q16 [d]                   */
-    const SKP_int    d                      /* I    Filter order (must be even)                                      */
+    opus_int16        *NLSF,                 /* O    Normalized Line Spectral Frequencies, Q15 (0 - (2^15-1)), [d]    */
+    opus_int32        *a_Q16,                /* I/O  Monic whitening filter coefficients in Q16 [d]                   */
+    const opus_int    d                      /* I    Filter order (must be even)                                      */
 )
 {
-    SKP_int      i, k, m, dd, root_ix, ffrac;
-    SKP_int32 xlo, xhi, xmid;
-    SKP_int32 ylo, yhi, ymid;
-    SKP_int32 nom, den;
-    SKP_int32 P[ SILK_MAX_ORDER_LPC / 2 + 1 ];
-    SKP_int32 Q[ SILK_MAX_ORDER_LPC / 2 + 1 ];
-    SKP_int32 *PQ[ 2 ];
-    SKP_int32 *p;
+    opus_int      i, k, m, dd, root_ix, ffrac;
+    opus_int32 xlo, xhi, xmid;
+    opus_int32 ylo, yhi, ymid;
+    opus_int32 nom, den;
+    opus_int32 P[ SILK_MAX_ORDER_LPC / 2 + 1 ];
+    opus_int32 Q[ SILK_MAX_ORDER_LPC / 2 + 1 ];
+    opus_int32 *PQ[ 2 ];
+    opus_int32 *p;
 
     /* Store pointers to array */
     PQ[ 0 ] = P;
@@ -142,7 +146,7 @@ void silk_A2NLSF(
 
     /* Find roots, alternating between P and Q */
     p = P;    /* Pointer to polynomial */
-    
+
     xlo = silk_LSFCosTab_FIX_Q12[ 0 ]; // Q12
     ylo = silk_A2NLSF_eval_poly( p, xlo, dd );
 
@@ -161,13 +165,13 @@ void silk_A2NLSF(
         /* Evaluate polynomial */
 #if OVERSAMPLE_COSINE_TABLE
         xhi = silk_LSFCosTab_FIX_Q12[   k       >> 1 ] +
-          ( ( silk_LSFCosTab_FIX_Q12[ ( k + 1 ) >> 1 ] - 
+          ( ( silk_LSFCosTab_FIX_Q12[ ( k + 1 ) >> 1 ] -
               silk_LSFCosTab_FIX_Q12[   k       >> 1 ] ) >> 1 );    /* Q12 */
 #else
         xhi = silk_LSFCosTab_FIX_Q12[ k ]; /* Q12 */
 #endif
         yhi = silk_A2NLSF_eval_poly( p, xhi, dd );
-        
+
         /* Detect zero crossing */
         if( ( ylo <= 0 && yhi >= 0 ) || ( ylo >= 0 && yhi <= 0 ) ) {
             /* Binary division */
@@ -197,7 +201,7 @@ void silk_A2NLSF(
 #endif
                 }
             }
-            
+
             /* Interpolate */
             if( SKP_abs( ylo ) < 65536 ) {
                 /* Avoid dividing by zero */
@@ -211,9 +215,9 @@ void silk_A2NLSF(
                 ffrac += SKP_DIV32( ylo, SKP_RSHIFT( ylo - yhi, 8 - BIN_DIV_STEPS_A2NLSF_FIX ) );
             }
 #if OVERSAMPLE_COSINE_TABLE
-            NLSF[ root_ix ] = (SKP_int16)SKP_min_32( SKP_LSHIFT( (SKP_int32)k, 7 ) + ffrac, SKP_int16_MAX ); 
+            NLSF[ root_ix ] = (opus_int16)SKP_min_32( SKP_LSHIFT( (opus_int32)k, 7 ) + ffrac, SKP_int16_MAX );
 #else
-            NLSF[ root_ix ] = (SKP_int16)SKP_min_32( SKP_LSHIFT( (SKP_int32)k, 8 ) + ffrac, SKP_int16_MAX ); 
+            NLSF[ root_ix ] = (opus_int16)SKP_min_32( SKP_LSHIFT( (opus_int32)k, 8 ) + ffrac, SKP_int16_MAX );
 #endif
 
             SKP_assert( NLSF[ root_ix ] >=     0 );
@@ -226,11 +230,11 @@ void silk_A2NLSF(
             }
             /* Alternate pointer to polynomial */
             p = PQ[ root_ix & 1 ];
-            
+
             /* Evaluate polynomial */
 #if OVERSAMPLE_COSINE_TABLE
             xlo = silk_LSFCosTab_FIX_Q12[ ( k - 1 ) >> 1 ] +
-              ( ( silk_LSFCosTab_FIX_Q12[   k       >> 1 ] - 
+              ( ( silk_LSFCosTab_FIX_Q12[   k       >> 1 ] -
                   silk_LSFCosTab_FIX_Q12[ ( k - 1 ) >> 1 ] ) >> 1 ); // Q12
 #else
             xlo = silk_LSFCosTab_FIX_Q12[ k - 1 ]; // Q12
@@ -241,7 +245,7 @@ void silk_A2NLSF(
             k++;
             xlo    = xhi;
             ylo    = yhi;
-            
+
 #if OVERSAMPLE_COSINE_TABLE
             if( k > 2 * LSF_COS_TAB_SZ_FIX ) {
 #else
@@ -250,9 +254,9 @@ void silk_A2NLSF(
                 i++;
                 if( i > MAX_ITERATIONS_A2NLSF_FIX ) {
                     /* Set NLSFs to white spectrum and exit */
-                    NLSF[ 0 ] = (SKP_int16)SKP_DIV32_16( 1 << 15, d + 1 );
+                    NLSF[ 0 ] = (opus_int16)SKP_DIV32_16( 1 << 15, d + 1 );
                     for( k = 1; k < d; k++ ) {
-                        NLSF[ k ] = (SKP_int16)SKP_SMULBB( k + 1, NLSF[ 0 ] );
+                        NLSF[ k ] = (opus_int16)SKP_SMULBB( k + 1, NLSF[ 0 ] );
                     }
                     return;
                 }

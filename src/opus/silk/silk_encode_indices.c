@@ -1,29 +1,33 @@
 /***********************************************************************
-Copyright (c) 2006-2011, Skype Limited. All rights reserved. 
-Redistribution and use in source and binary forms, with or without 
-modification, (subject to the limitations in the disclaimer below) 
+Copyright (c) 2006-2011, Skype Limited. All rights reserved.
+Redistribution and use in source and binary forms, with or without
+modification, (subject to the limitations in the disclaimer below)
 are permitted provided that the following conditions are met:
 - Redistributions of source code must retain the above copyright notice,
 this list of conditions and the following disclaimer.
-- Redistributions in binary form must reproduce the above copyright 
-notice, this list of conditions and the following disclaimer in the 
+- Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Skype Limited, nor the names of specific 
-contributors, may be used to endorse or promote products derived from 
+- Neither the name of Skype Limited, nor the names of specific
+contributors, may be used to endorse or promote products derived from
 this software without specific prior written permission.
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED 
-BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND 
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
 CONTRIBUTORS ''AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
-BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND 
-FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
-COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
+BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
-NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF 
-USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON 
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***********************************************************************/
+
+#if defined(HAVE_CONFIG_H) || defined(ARDUINO)
+#include "opus/config.h"
+#endif
 
 #include "silk_main.h"
 
@@ -31,18 +35,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void silk_encode_indices(
     silk_encoder_state          *psEncC,            /* I/O  Encoder state                               */
     ec_enc                      *psRangeEnc,        /* I/O  Compressor data structure                   */
-    SKP_int                     FrameIndex,         /* I    Frame number                                */
-    SKP_int                     encode_LBRR         /* I    Flag indicating LBRR data is being encoded  */
+    opus_int                     FrameIndex,         /* I    Frame number                                */
+    opus_int                     encode_LBRR         /* I    Flag indicating LBRR data is being encoded  */
 )
 {
-    SKP_int   i, k, condCoding, typeOffset;
-    SKP_int   encode_absolute_lagIndex, delta_lagIndex;
-    SKP_int16 ec_ix[ MAX_LPC_ORDER ];
-    SKP_uint8 pred_Q8[ MAX_LPC_ORDER ];
+    opus_int   i, k, condCoding, typeOffset;
+    opus_int   encode_absolute_lagIndex, delta_lagIndex;
+    opus_int16 ec_ix[ MAX_LPC_ORDER ];
+    opus_uint8 pred_Q8[ MAX_LPC_ORDER ];
     const SideInfoIndices *psIndices;
 #if SAVE_ALL_INTERNAL_DATA
-    SKP_int nBytes_lagIndex, nBytes_contourIndex, nBytes_LTP;
-    SKP_int nBytes_after, nBytes_before;
+    opus_int nBytes_lagIndex, nBytes_contourIndex, nBytes_LTP;
+    opus_int nBytes_after, nBytes_before;
 #endif
 
     /* Use conditional coding if previous frame available */
@@ -97,7 +101,7 @@ void silk_encode_indices(
 #ifdef SAVE_ALL_INTERNAL_DATA
     nBytes_after = SKP_RSHIFT( ec_tell( psRangeEnc ) + 7, 3 );
     nBytes_after -= nBytes_before; // bytes just added
-    DEBUG_STORE_DATA( nBytes_gains.dat, &nBytes_after, sizeof( SKP_int ) );
+    DEBUG_STORE_DATA( nBytes_gains.dat, &nBytes_after, sizeof( opus_int ) );
 #endif
 
     /****************/
@@ -132,10 +136,10 @@ void silk_encode_indices(
     DEBUG_STORE_DATA( lsf_interpol.dat, &psIndices->NLSFInterpCoef_Q2, sizeof(int) );
     nBytes_after = SKP_RSHIFT( ec_tell( psRangeEnc ) + 7, 3 );
     nBytes_after -= nBytes_before; // bytes just added
-    DEBUG_STORE_DATA( nBytes_LSF.dat, &nBytes_after, sizeof( SKP_int ) );
+    DEBUG_STORE_DATA( nBytes_LSF.dat, &nBytes_after, sizeof( opus_int ) );
 #endif
 
-    if( psIndices->signalType == TYPE_VOICED ) 
+    if( psIndices->signalType == TYPE_VOICED )
     {
         /*********************/
         /* Encode pitch lags */
@@ -159,7 +163,7 @@ void silk_encode_indices(
         }
         if( encode_absolute_lagIndex ) {
             /* Absolute encoding */
-            SKP_int32 pitch_high_bits, pitch_low_bits;
+            opus_int32 pitch_high_bits, pitch_low_bits;
             pitch_high_bits = SKP_DIV32_16( psIndices->lagIndex, SKP_RSHIFT( psEncC->fs_kHz, 1 ) );
             pitch_low_bits = psIndices->lagIndex - SKP_SMULBB( pitch_high_bits, SKP_RSHIFT( psEncC->fs_kHz, 1 ) );
             SKP_assert( pitch_low_bits < psEncC->fs_kHz / 2 );
@@ -221,15 +225,15 @@ void silk_encode_indices(
 #endif
     }
 #ifdef SAVE_ALL_INTERNAL_DATA
-    else { 
+    else {
         // Unvoiced speech
         nBytes_lagIndex     = 0;
         nBytes_contourIndex = 0;
         nBytes_LTP          = 0;
     }
-    DEBUG_STORE_DATA( nBytes_lagIndex.dat,      &nBytes_lagIndex,       sizeof( SKP_int ) );
-    DEBUG_STORE_DATA( nBytes_contourIndex.dat,  &nBytes_contourIndex,   sizeof( SKP_int ) );
-    DEBUG_STORE_DATA( nBytes_LTP.dat,           &nBytes_LTP,            sizeof( SKP_int ) );
+    DEBUG_STORE_DATA( nBytes_lagIndex.dat,      &nBytes_lagIndex,       sizeof( opus_int ) );
+    DEBUG_STORE_DATA( nBytes_contourIndex.dat,  &nBytes_contourIndex,   sizeof( opus_int ) );
+    DEBUG_STORE_DATA( nBytes_LTP.dat,           &nBytes_LTP,            sizeof( opus_int ) );
 #endif
 
     psEncC->ec_prevSignalType = psIndices->signalType;

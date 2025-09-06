@@ -12,16 +12,11 @@
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
 
-   - Neither the name of Internet Society, IETF or IETF Trust, nor the
-   names of specific contributors, may be used to endorse or promote
-   products derived from this software without specific prior written
-   permission.
-
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
-   OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+   A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR
+   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
@@ -34,10 +29,31 @@
 #include "opus/config.h"
 #endif
 
+#include <stdio.h>
+#include "string.h"
 #include "opus.h"
-#include "opus_private.h"
-#include "opus/celt/os_support.h"
+#include "stdlib.h"
 
+struct OpusRepacketizer {
+   unsigned char toc;
+   int nb_frames;
+   const unsigned char *frames[48];
+   short len[48];
+   int framesize;
+};
+
+static int encode_size(int size, unsigned char *data)
+{
+   if (size < 252)
+   {
+      data[0] = size;
+      return 1;
+   } else {
+      data[0] = 252+(size&0x3);
+      data[1] = (size-(int)data[0])>>2;
+      return 2;
+   }
+}
 
 int opus_repacketizer_get_size(void)
 {
@@ -52,43 +68,37 @@ OpusRepacketizer *opus_repacketizer_init(OpusRepacketizer *rp)
 
 OpusRepacketizer *opus_repacketizer_create(void)
 {
-   OpusRepacketizer *rp;
-   rp=(OpusRepacketizer *)opus_alloc(opus_repacketizer_get_size());
-   if(rp==NULL)return NULL;
-   return opus_repacketizer_init(rp);
+   return opus_repacketizer_init(malloc(opus_repacketizer_get_size()));
 }
 
 void opus_repacketizer_destroy(OpusRepacketizer *rp)
 {
-   opus_free(rp);
+   free(rp);
 }
 
 int opus_repacketizer_cat(OpusRepacketizer *rp, const unsigned char *data, int len)
 {
    unsigned char tmp_toc;
-   int curr_nb_frames,ret;
+   int curr_nb_frames;
    /* Set of check ToC */
-   if (len<1) return OPUS_INVALID_PACKET;
    if (rp->nb_frames == 0)
    {
       rp->toc = data[0];
-      rp->framesize = opus_packet_get_samples_per_frame(data, 8000);
-   } else if ((rp->toc&0xFC) != (data[0]&0xFC))
+      rp->framesize = opus_packet_get_samples_per_frame(data, 48000);
+   } else if (rp->toc&0xFC != data[0]&0xFC)
    {
       /*fprintf(stderr, "toc mismatch: 0x%x vs 0x%x\n", rp->toc, data[0]);*/
-      return OPUS_INVALID_PACKET;
+      return OPUS_CORRUPTED_DATA;
    }
    curr_nb_frames = opus_packet_get_nb_frames(data, len);
-   if(curr_nb_frames<1) return OPUS_INVALID_PACKET;
 
    /* Check the 120 ms maximum packet size */
-   if ((curr_nb_frames+rp->nb_frames)*rp->framesize > 960)
+   if ((curr_nb_frames+rp->nb_frames)*rp->framesize > 5760)
    {
-      return OPUS_INVALID_PACKET;
+      return OPUS_CORRUPTED_DATA;
    }
 
-   ret=opus_packet_parse(data, len, &tmp_toc, &rp->frames[rp->nb_frames], &rp->len[rp->nb_frames], NULL);
-   if(ret<1)return ret;
+   opus_packet_parse(data, len, &tmp_toc, &rp->frames[rp->nb_frames], &rp->len[rp->nb_frames], NULL);
 
    rp->nb_frames += curr_nb_frames;
    return OPUS_OK;
@@ -99,10 +109,9 @@ int opus_repacketizer_get_nb_frames(OpusRepacketizer *rp)
    return rp->nb_frames;
 }
 
-opus_int32 opus_repacketizer_out_range_impl(OpusRepacketizer *rp, int begin, int end, unsigned char *data, opus_int32 maxlen, int self_delimited)
+int opus_repacketizer_out_range(OpusRepacketizer *rp, int begin, int end, unsigned char *data, int maxlen)
 {
-   int i, count;
-   opus_int32 tot_size;
+   int i, count, tot_size;
    short *len;
    const unsigned char **frames;
 
@@ -115,17 +124,12 @@ opus_int32 opus_repacketizer_out_range_impl(OpusRepacketizer *rp, int begin, int
 
    len = rp->len+begin;
    frames = rp->frames+begin;
-   if (self_delimited)
-      tot_size = 1 + (len[count-1]>=252);
-   else
-      tot_size = 0;
-
    switch (count)
    {
    case 1:
    {
       /* Code 0 */
-      tot_size += len[0]+1;
+      tot_size = len[0]+1;
       if (tot_size > maxlen)
          return OPUS_BUFFER_TOO_SMALL;
       *data++ = rp->toc&0xFC;
@@ -136,13 +140,13 @@ opus_int32 opus_repacketizer_out_range_impl(OpusRepacketizer *rp, int begin, int
       if (len[1] == len[0])
       {
          /* Code 1 */
-         tot_size += 2*len[0]+1;
+         tot_size = 2*len[0]+1;
          if (tot_size > maxlen)
             return OPUS_BUFFER_TOO_SMALL;
          *data++ = (rp->toc&0xFC) | 0x1;
       } else {
          /* Code 2 */
-         tot_size += len[0]+len[1]+2+(len[0]>=252);
+         tot_size = len[0]+len[1]+2+(len[0]>=252);
          if (tot_size > maxlen)
             return OPUS_BUFFER_TOO_SMALL;
          *data++ = (rp->toc&0xFC) | 0x2;
@@ -166,7 +170,7 @@ opus_int32 opus_repacketizer_out_range_impl(OpusRepacketizer *rp, int begin, int
       }
       if (vbr)
       {
-         tot_size += 2;
+         tot_size = 2;
          for (i=0;i<count-1;i++)
             tot_size += 1 + (len[i]>=252) + len[i];
          tot_size += len[count-1];
@@ -178,36 +182,26 @@ opus_int32 opus_repacketizer_out_range_impl(OpusRepacketizer *rp, int begin, int
          for (i=0;i<count-1;i++)
             data += encode_size(len[i], data);
       } else {
-         tot_size += count*len[0]+2;
+         tot_size = count*len[0]+2;
          if (tot_size > maxlen)
             return OPUS_BUFFER_TOO_SMALL;
          *data++ = (rp->toc&0xFC) | 0x3;
          *data++ = count;
       }
    }
-   break;
-   }
-   if (self_delimited) {
-      int sdlen = encode_size(len[count-1], data);
-      data += sdlen;
    }
    /* Copy the actual data */
    for (i=0;i<count;i++)
    {
-      OPUS_COPY(data, frames[i], len[i]);
+      memcpy(data, frames[i], len[i]);
       data += len[i];
    }
    return tot_size;
 }
 
-opus_int32 opus_repacketizer_out_range(OpusRepacketizer *rp, int begin, int end, unsigned char *data, opus_int32 maxlen)
+int opus_repacketizer_out(OpusRepacketizer *rp, unsigned char *data, int maxlen)
 {
-   return opus_repacketizer_out_range_impl(rp, begin, end, data, maxlen, 0);
-}
-
-opus_int32 opus_repacketizer_out(OpusRepacketizer *rp, unsigned char *data, opus_int32 maxlen)
-{
-   return opus_repacketizer_out_range_impl(rp, 0, rp->nb_frames, data, maxlen, 0);
+   return opus_repacketizer_out_range(rp, 0, rp->nb_frames, data, maxlen);
 }
 
 
