@@ -32,10 +32,9 @@ You can download the library as zip and call include Library -> zip library. Or 
 ```
 cd  ~/Documents/Arduino/libraries
 git clone https://github.com/pschatzmann/codec-opus.git
-
 ```
 
-You must also __install the related ogg library__!
+You must also __install the related [codec-ogg](https://github.com/pschatzmann/codec-ogg) library__!
 
 ## Documentation
 
