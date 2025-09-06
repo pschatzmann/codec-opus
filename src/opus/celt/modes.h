@@ -66,7 +66,7 @@ struct OpusCustomMode {
    const unsigned char   *allocVectors;   /**< Number of bits in each band for several rates */
    const opus_int16 *logN;
 
-   const celt_coef *window;
+   const opus_val16 *window;
    mdct_lookup mdct;
    PulseCache cache;
 };

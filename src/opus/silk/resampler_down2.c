@@ -71,3 +71,4 @@ void silk_resampler_down2(
         out[ k ] = (opus_int16)silk_SAT16( silk_RSHIFT_ROUND( out32, 11 ) );
     }
 }
+

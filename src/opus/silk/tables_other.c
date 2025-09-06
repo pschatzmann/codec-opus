@@ -121,3 +121,4 @@ const opus_int32 silk_Transition_LP_A_Q28[ TRANSITION_INT_NUM ][ TRANSITION_NA ]
 #ifdef __cplusplus
 }
 #endif
+

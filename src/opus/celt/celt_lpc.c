@@ -277,7 +277,7 @@ void celt_iir(const opus_val32 *_x,
 int _celt_autocorr(
                    const opus_val16 *x,   /*  in: [0...n-1] samples x   */
                    opus_val32       *ac,  /* out: [0...lag-1] ac values */
-                   const celt_coef  *window,
+                   const opus_val16       *window,
                    int          overlap,
                    int          lag,
                    int          n,
@@ -302,9 +302,8 @@ int _celt_autocorr(
          xx[i] = x[i];
       for (i=0;i<overlap;i++)
       {
-         opus_val16 w = COEF2VAL16(window[i]);
-         xx[i] = MULT16_16_Q15(x[i],w);
-         xx[n-i-1] = MULT16_16_Q15(x[n-i-1],w);
+         xx[i] = MULT16_16_Q15(x[i],window[i]);
+         xx[n-i-1] = MULT16_16_Q15(x[n-i-1],window[i]);
       }
       xptr = xx;
    }

@@ -30,6 +30,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include "opus/silk/SigProc_FIX.h"
 #include "structs_FIX.h"
+#include "silk_structs_FIX.h"
 #include "opus/silk/control.h"
 #include "opus/silk/main.h"
 #include "opus/silk/PLC.h"

@@ -105,3 +105,4 @@ opus_int silk_decoder_set_fs(
 
     return ret;
 }
+

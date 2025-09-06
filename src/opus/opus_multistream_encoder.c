@@ -184,35 +184,35 @@ static void channel_pos(int channels, int pos[8])
 
 #if 1
 /* Computes a rough approximation of log2(2^a + 2^b) */
-static opus_val16 logSum(celt_glog a, celt_glog b)
+static opus_val16 logSum(opus_val16 a, opus_val16 b)
 {
-   celt_glog max;
-   celt_glog diff;
-   celt_glog frac;
-   static const celt_glog diff_table[17] = {
-         GCONST(0.5000000f), GCONST(0.2924813f), GCONST(0.1609640f), GCONST(0.0849625f),
-         GCONST(0.0437314f), GCONST(0.0221971f), GCONST(0.0111839f), GCONST(0.0056136f),
-         GCONST(0.0028123f)
+   opus_val16 max;
+   opus_val32 diff;
+   opus_val16 frac;
+   static const opus_val16 diff_table[17] = {
+         QCONST16(0.5000000f, DB_SHIFT), QCONST16(0.2924813f, DB_SHIFT), QCONST16(0.1609640f, DB_SHIFT), QCONST16(0.0849625f, DB_SHIFT),
+         QCONST16(0.0437314f, DB_SHIFT), QCONST16(0.0221971f, DB_SHIFT), QCONST16(0.0111839f, DB_SHIFT), QCONST16(0.0056136f, DB_SHIFT),
+         QCONST16(0.0028123f, DB_SHIFT)
    };
    int low;
    if (a>b)
    {
       max = a;
-      diff = SUB32(a,b);
+      diff = SUB32(EXTEND32(a),EXTEND32(b));
    } else {
       max = b;
-      diff = SUB32(b,a);
+      diff = SUB32(EXTEND32(b),EXTEND32(a));
    }
-   if (!(diff < GCONST(8.f)))  /* inverted to catch NaNs */
+   if (!(diff < QCONST16(8.f, DB_SHIFT)))  /* inverted to catch NaNs */
       return max;
 #ifdef FIXED_POINT
    low = SHR32(diff, DB_SHIFT-1);
-   frac = VSHR32(diff - SHL32(low, DB_SHIFT-1), DB_SHIFT-16);
+   frac = SHL16(diff - SHL16(low, DB_SHIFT-1), 16-DB_SHIFT);
 #else
    low = (int)floor(2*diff);
    frac = 2*diff - low;
 #endif
-   return max + diff_table[low] + MULT16_32_Q15(frac, SUB32(diff_table[low+1], diff_table[low]));
+   return max + diff_table[low] + MULT16_16_Q15(frac, SUB16(diff_table[low+1], diff_table[low]));
 }
 #else
 opus_val16 logSum(opus_val16 a, opus_val16 b)
@@ -221,7 +221,7 @@ opus_val16 logSum(opus_val16 a, opus_val16 b)
 }
 #endif
 
-void surround_analysis(const CELTMode *celt_mode, const void *pcm, celt_glog *bandLogE, opus_val32 *mem, opus_val32 *preemph_mem,
+void surround_analysis(const CELTMode *celt_mode, const void *pcm, opus_val16 *bandLogE, opus_val32 *mem, opus_val32 *preemph_mem,
       int len, int overlap, int channels, int rate, opus_copy_channel_in_func copy_channel_in, int arch
 )
 {
@@ -234,9 +234,9 @@ void surround_analysis(const CELTMode *celt_mode, const void *pcm, celt_glog *ba
    int freq_size;
    opus_val16 channel_offset;
    opus_val32 bandE[21];
-   celt_glog maskLogE[3][21];
+   opus_val16 maskLogE[3][21];
    VARDECL(opus_val32, in);
-   VARDECL(opus_res, x);
+   VARDECL(opus_val16, x);
    VARDECL(opus_val32, freq);
    SAVE_STACK;
 
@@ -250,14 +250,14 @@ void surround_analysis(const CELTMode *celt_mode, const void *pcm, celt_glog *ba
          break;
 
    ALLOC(in, frame_size+overlap, opus_val32);
-   ALLOC(x, len, opus_res);
+   ALLOC(x, len, opus_val16);
    ALLOC(freq, freq_size, opus_val32);
 
    channel_pos(channels, pos);
 
    for (c=0;c<3;c++)
       for (i=0;i<21;i++)
-         maskLogE[c][i] = -GCONST(28.f);
+         maskLogE[c][i] = -QCONST16(28.f, DB_SHIFT);
 
    for (c=0;c<channels;c++)
    {
@@ -303,9 +303,9 @@ void surround_analysis(const CELTMode *celt_mode, const void *pcm, celt_glog *ba
       amp2Log2(celt_mode, 21, 21, bandE, bandLogE+21*c, 1);
       /* Apply spreading function with -6 dB/band going up and -12 dB/band going down. */
       for (i=1;i<21;i++)
-         bandLogE[21*c+i] = MAXG(bandLogE[21*c+i], bandLogE[21*c+i-1]-GCONST(1.f));
+         bandLogE[21*c+i] = MAX16(bandLogE[21*c+i], bandLogE[21*c+i-1]-QCONST16(1.f, DB_SHIFT));
       for (i=19;i>=0;i--)
-         bandLogE[21*c+i] = MAXG(bandLogE[21*c+i], bandLogE[21*c+i+1]-GCONST(2.f));
+         bandLogE[21*c+i] = MAX16(bandLogE[21*c+i], bandLogE[21*c+i+1]-QCONST16(2.f, DB_SHIFT));
       if (pos[c]==1)
       {
          for (i=0;i<21;i++)
@@ -318,8 +318,8 @@ void surround_analysis(const CELTMode *celt_mode, const void *pcm, celt_glog *ba
       {
          for (i=0;i<21;i++)
          {
-            maskLogE[0][i] = logSum(maskLogE[0][i], bandLogE[21*c+i]-GCONST(.5f));
-            maskLogE[2][i] = logSum(maskLogE[2][i], bandLogE[21*c+i]-GCONST(.5f));
+            maskLogE[0][i] = logSum(maskLogE[0][i], bandLogE[21*c+i]-QCONST16(.5f, DB_SHIFT));
+            maskLogE[2][i] = logSum(maskLogE[2][i], bandLogE[21*c+i]-QCONST16(.5f, DB_SHIFT));
          }
       }
 #if 0
@@ -347,7 +347,7 @@ void surround_analysis(const CELTMode *celt_mode, const void *pcm, celt_glog *ba
 #endif
    for (c=0;c<channels;c++)
    {
-      celt_glog *mask;
+      opus_val16 *mask;
       if (pos[c]!=0)
       {
          mask = &maskLogE[pos[c]-1][0];
@@ -819,14 +819,14 @@ int opus_multistream_encode_native
    int s;
    char *ptr;
    int tot_size;
-   VARDECL(opus_res, buf);
-   VARDECL(celt_glog, bandSMR);
+   VARDECL(opus_val16, buf);
+   VARDECL(opus_val16, bandSMR);
    unsigned char tmp_data[MS_FRAME_TMP];
    OpusRepacketizer rp;
    opus_int32 vbr;
    const CELTMode *celt_mode;
    opus_int32 bitrates[256];
-   celt_glog bandLogE[42];
+   opus_val16 bandLogE[42];
    opus_val32 *mem = NULL;
    opus_val32 *preemph_mem=NULL;
    int frame_size;
@@ -862,11 +862,11 @@ int opus_multistream_encode_native
       RESTORE_STACK;
       return OPUS_BUFFER_TOO_SMALL;
    }
-   ALLOC(buf, 2*frame_size, opus_res);
+   ALLOC(buf, 2*frame_size, opus_val16);
    coupled_size = opus_encoder_get_size(2);
    mono_size = opus_encoder_get_size(1);
 
-   ALLOC(bandSMR, 21*st->layout.nb_channels, celt_glog);
+   ALLOC(bandSMR, 21*st->layout.nb_channels, opus_val16);
    if (st->mapping_type == MAPPING_TYPE_SURROUND)
    {
       surround_analysis(celt_mode, pcm, bandSMR, mem, preemph_mem, frame_size, 120, st->layout.nb_channels, Fs, copy_channel_in, st->arch);
@@ -1014,7 +1014,7 @@ int opus_multistream_encode_native
 
 #if !defined(DISABLE_FLOAT_API)
 static void opus_copy_channel_in_float(
-  opus_res *dst,
+  opus_val16 *dst,
   int dst_stride,
   const void *src,
   int src_stride,
@@ -1028,12 +1028,16 @@ static void opus_copy_channel_in_float(
    (void)user_data;
    float_src = (const float *)src;
    for (i=0;i<frame_size;i++)
-      dst[i*dst_stride] = FLOAT2RES(float_src[i*src_stride+src_channel]);
+#if defined(FIXED_POINT)
+      dst[i*dst_stride] = FLOAT2INT16(float_src[i*src_stride+src_channel]);
+#else
+      dst[i*dst_stride] = float_src[i*src_stride+src_channel];
+#endif
 }
 #endif
 
 static void opus_copy_channel_in_short(
-  opus_res *dst,
+  opus_val16 *dst,
   int dst_stride,
   const void *src,
   int src_stride,
@@ -1047,30 +1051,18 @@ static void opus_copy_channel_in_short(
    (void)user_data;
    short_src = (const opus_int16 *)src;
    for (i=0;i<frame_size;i++)
-      dst[i*dst_stride] = INT16TORES(short_src[i*src_stride+src_channel]);
+#if defined(FIXED_POINT)
+      dst[i*dst_stride] = short_src[i*src_stride+src_channel];
+#else
+      dst[i*dst_stride] = (1/32768.f)*short_src[i*src_stride+src_channel];
+#endif
 }
 
-static void opus_copy_channel_in_int24(
-  opus_res *dst,
-  int dst_stride,
-  const void *src,
-  int src_stride,
-  int src_channel,
-  int frame_size,
-  void *user_data
-)
-{
-   const opus_int32 *short_src;
-   opus_int32 i;
-   (void)user_data;
-   short_src = (const opus_int32 *)src;
-   for (i=0;i<frame_size;i++)
-      dst[i*dst_stride] = INT24TORES(short_src[i*src_stride+src_channel]);
-}
 
+#ifdef FIXED_POINT
 int opus_multistream_encode(
     OpusMSEncoder *st,
-    const opus_int16 *pcm,
+    const opus_val16 *pcm,
     int frame_size,
     unsigned char *data,
     opus_int32 max_data_bytes
@@ -1078,18 +1070,6 @@ int opus_multistream_encode(
 {
    return opus_multistream_encode_native(st, opus_copy_channel_in_short,
       pcm, frame_size, data, max_data_bytes, 16, downmix_int, 0, NULL);
-}
-
-int opus_multistream_encode24(
-    OpusMSEncoder *st,
-    const opus_int32 *pcm,
-    int frame_size,
-    unsigned char *data,
-    opus_int32 max_data_bytes
-)
-{
-   return opus_multistream_encode_native(st, opus_copy_channel_in_int24,
-      pcm, frame_size, data, max_data_bytes, MAX_ENCODING_DEPTH, downmix_int24, 0, NULL);
 }
 
 #ifndef DISABLE_FLOAT_API
@@ -1102,7 +1082,35 @@ int opus_multistream_encode_float(
 )
 {
    return opus_multistream_encode_native(st, opus_copy_channel_in_float,
-      pcm, frame_size, data, max_data_bytes, MAX_ENCODING_DEPTH, downmix_float, 1, NULL);
+      pcm, frame_size, data, max_data_bytes, 16, downmix_float, 1, NULL);
+}
+#endif
+
+#else
+
+int opus_multistream_encode_float
+(
+    OpusMSEncoder *st,
+    const opus_val16 *pcm,
+    int frame_size,
+    unsigned char *data,
+    opus_int32 max_data_bytes
+)
+{
+   return opus_multistream_encode_native(st, opus_copy_channel_in_float,
+      pcm, frame_size, data, max_data_bytes, 24, downmix_float, 1, NULL);
+}
+
+int opus_multistream_encode(
+    OpusMSEncoder *st,
+    const opus_int16 *pcm,
+    int frame_size,
+    unsigned char *data,
+    opus_int32 max_data_bytes
+)
+{
+   return opus_multistream_encode_native(st, opus_copy_channel_in_short,
+      pcm, frame_size, data, max_data_bytes, 16, downmix_int, 0, NULL);
 }
 #endif
 

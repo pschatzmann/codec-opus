@@ -128,8 +128,8 @@ static OPUS_INLINE void limit_warped_coefs(
     silk_assert( 0 );
 }
 
-/* Disable MIPS DSP version until it's updated. */
-#if 0 && defined(__mips_dsp) && __mips == 32
+/* Disable MIPS version until it's updated. */
+#if 0 && defined(MIPSr1_ASM)
 #include "mips/noise_shape_analysis_FIX_mipsr1.h"
 #endif
 
