@@ -1,6 +1,10 @@
-/* Copyright (c) 2010 Xiph.Org Foundation, Skype Limited
+/* Copyright (c) 2010-2012 IETF Trust, Xiph.Org Foundation, Skype Limited. All rights reserved.
    Written by Jean-Marc Valin and Koen Vos */
 /*
+
+   This file is extracted from RFC6716. Please see that RFC for additional
+   information.
+
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
@@ -12,11 +16,16 @@
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
 
+   - Neither the name of Internet Society, IETF or IETF Trust, nor the
+   names of specific contributors, may be used to endorse or promote
+   products derived from this software without specific prior written
+   permission.
+
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-   A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR
-   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+   OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
@@ -292,7 +301,7 @@ static int opus_decode_frame(OpusDecoder *st, const unsigned char *data,
       if (st->prev_mode==MODE_CELT_ONLY)
          silk_InitDecoder( silk_dec );
 
-      /* The SILK PLC cannot support produce frames of less than 10 ms */
+      /* The SILK PLC cannot produce frames of less than 10 ms */
       st->DecControl.payloadSize_ms = IMAX(10, 1000 * audiosize / st->Fs);
 
       if (data != NULL)
@@ -574,7 +583,7 @@ static int opus_packet_parse_impl(const unsigned char *data, int len,
       last_size = len-size[0];
       break;
    /* Multiple CBR/VBR frames (from 0 to 120 ms) */
-   case 3:
+   default: /*case 3:*/
       if (len<1)
          return OPUS_INVALID_PACKET;
       /* Number of frames encoded in bits 0 to 5 */
