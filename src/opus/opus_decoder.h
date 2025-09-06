@@ -45,11 +45,13 @@ struct OpusDecoder {
     int          frame_size;
     int          prev_redundancy;
 
+#ifdef OPUS_TEST_RANGE_CODER_STATE
     int          rangeFinal;
+#endif
 };
 
-static inline opus_int16 SAT16(opus_int32 x) {
-    return x > 32767 ? 32767 : x < -32768 ? -32768 : (opus_int16)x;
+static inline short SAT16(int x) {
+    return x > 32767 ? 32767 : x < -32768 ? -32768 : (short)x;
 };
 
 #endif /* OPUS_DECODER_H */

@@ -1,33 +1,29 @@
 /***********************************************************************
-Copyright (c) 2006-2011, Skype Limited. All rights reserved.
-Redistribution and use in source and binary forms, with or without
-modification, (subject to the limitations in the disclaimer below)
+Copyright (c) 2006-2011, Skype Limited. All rights reserved. 
+Redistribution and use in source and binary forms, with or without 
+modification, (subject to the limitations in the disclaimer below) 
 are permitted provided that the following conditions are met:
 - Redistributions of source code must retain the above copyright notice,
 this list of conditions and the following disclaimer.
-- Redistributions in binary form must reproduce the above copyright
-notice, this list of conditions and the following disclaimer in the
+- Redistributions in binary form must reproduce the above copyright 
+notice, this list of conditions and the following disclaimer in the 
 documentation and/or other materials provided with the distribution.
-- Neither the name of Skype Limited, nor the names of specific
-contributors, may be used to endorse or promote products derived from
+- Neither the name of Skype Limited, nor the names of specific 
+contributors, may be used to endorse or promote products derived from 
 this software without specific prior written permission.
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
-BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED 
+BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND 
 CONTRIBUTORS ''AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
-BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
-FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND 
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
 INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
-NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
-USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF 
+USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON 
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***********************************************************************/
-
-#if defined(HAVE_CONFIG_H) || defined(ARDUINO)
-#include "opus/config.h"
-#endif
 
 #include "silk_main_FIX.h"
 #include "opus/silk/silk_tuning_parameters.h"
@@ -36,18 +32,18 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void silk_find_pitch_lags_FIX(
     silk_encoder_state_FIX          *psEnc,         /* I/O  encoder state                               */
     silk_encoder_control_FIX        *psEncCtrl,     /* I/O  encoder control                             */
-    opus_int16                       res[],          /* O    residual                                    */
-    const opus_int16                 x[]             /* I    Speech signal                               */
+    SKP_int16                       res[],          /* O    residual                                    */
+    const SKP_int16                 x[]             /* I    Speech signal                               */
 )
 {
-    opus_int   buf_len, i, scale;
-    opus_int32 thrhld_Q15, res_nrg;
-    const opus_int16 *x_buf, *x_buf_ptr;
-    opus_int16 Wsig[      FIND_PITCH_LPC_WIN_MAX ], *Wsig_ptr;
-    opus_int32 auto_corr[ MAX_FIND_PITCH_LPC_ORDER + 1 ];
-    opus_int16 rc_Q15[    MAX_FIND_PITCH_LPC_ORDER ];
-    opus_int32 A_Q24[     MAX_FIND_PITCH_LPC_ORDER ];
-    opus_int16 A_Q12[     MAX_FIND_PITCH_LPC_ORDER ];
+    SKP_int   buf_len, i, scale;
+    SKP_int32 thrhld_Q15, res_nrg;
+    const SKP_int16 *x_buf, *x_buf_ptr;
+    SKP_int16 Wsig[      FIND_PITCH_LPC_WIN_MAX ], *Wsig_ptr;
+    SKP_int32 auto_corr[ MAX_FIND_PITCH_LPC_ORDER + 1 ];
+    SKP_int16 rc_Q15[    MAX_FIND_PITCH_LPC_ORDER ];
+    SKP_int32 A_Q24[     MAX_FIND_PITCH_LPC_ORDER ];
+    SKP_int16 A_Q12[     MAX_FIND_PITCH_LPC_ORDER ];
 
     /******************************************/
     /* Setup buffer lengths etc based on Fs   */
@@ -62,9 +58,9 @@ void silk_find_pitch_lags_FIX(
     /*************************************/
     /* Estimate LPC AR coefficients      */
     /*************************************/
-
+    
     /* Calculate windowed signal */
-
+    
     /* First LA_LTP samples */
     x_buf_ptr = x_buf + buf_len - psEnc->sCmn.pitch_LPC_win_length;
     Wsig_ptr  = Wsig;
@@ -73,7 +69,7 @@ void silk_find_pitch_lags_FIX(
     /* Middle un - windowed samples */
     Wsig_ptr  += psEnc->sCmn.la_pitch;
     x_buf_ptr += psEnc->sCmn.la_pitch;
-    SKP_memcpy( Wsig_ptr, x_buf_ptr, ( psEnc->sCmn.pitch_LPC_win_length - SKP_LSHIFT( psEnc->sCmn.la_pitch, 1 ) ) * sizeof( opus_int16 ) );
+    SKP_memcpy( Wsig_ptr, x_buf_ptr, ( psEnc->sCmn.pitch_LPC_win_length - SKP_LSHIFT( psEnc->sCmn.la_pitch, 1 ) ) * sizeof( SKP_int16 ) );
 
     /* Last LA_LTP samples */
     Wsig_ptr  += psEnc->sCmn.pitch_LPC_win_length - SKP_LSHIFT( psEnc->sCmn.la_pitch, 1 );
@@ -81,8 +77,8 @@ void silk_find_pitch_lags_FIX(
     silk_apply_sine_window( Wsig_ptr, x_buf_ptr, 2, psEnc->sCmn.la_pitch );
 
     /* Calculate autocorrelation sequence */
-    silk_autocorr( auto_corr, &scale, Wsig, psEnc->sCmn.pitch_LPC_win_length, psEnc->sCmn.pitchEstimationLPCOrder + 1 );
-
+    silk_autocorr( auto_corr, &scale, Wsig, psEnc->sCmn.pitch_LPC_win_length, psEnc->sCmn.pitchEstimationLPCOrder + 1 ); 
+        
     /* Add white noise, as fraction of energy */
     auto_corr[ 0 ] = SKP_SMLAWB( auto_corr[ 0 ], auto_corr[ 0 ], SILK_FIX_CONST( FIND_PITCH_WHITE_NOISE_FRACTION, 16 ) ) + 1;
 
@@ -94,15 +90,15 @@ void silk_find_pitch_lags_FIX(
 
     /* Convert reflection coefficients to prediction coefficients */
     silk_k2a( A_Q24, rc_Q15, psEnc->sCmn.pitchEstimationLPCOrder );
-
+    
     /* Convert From 32 bit Q24 to 16 bit Q12 coefs */
     for( i = 0; i < psEnc->sCmn.pitchEstimationLPCOrder; i++ ) {
-        A_Q12[ i ] = ( opus_int16 )SKP_SAT16( SKP_RSHIFT( A_Q24[ i ], 12 ) );
+        A_Q12[ i ] = ( SKP_int16 )SKP_SAT16( SKP_RSHIFT( A_Q24[ i ], 12 ) );
     }
 
     /* Do BWE */
     silk_bwexpander( A_Q12, psEnc->sCmn.pitchEstimationLPCOrder, SILK_FIX_CONST( FIND_PITCH_BANDWITH_EXPANSION, 16 ) );
-
+    
     /*****************************************/
     /* LPC analysis filtering                */
     /*****************************************/
@@ -120,9 +116,9 @@ void silk_find_pitch_lags_FIX(
         /*****************************************/
         /* Call pitch estimator                  */
         /*****************************************/
-        if( silk_pitch_analysis_core( res, psEncCtrl->pitchL, &psEnc->sCmn.indices.lagIndex, &psEnc->sCmn.indices.contourIndex,
-                &psEnc->LTPCorr_Q15, psEnc->sCmn.prevLag, psEnc->sCmn.pitchEstimationThreshold_Q16,
-                ( opus_int16 )thrhld_Q15, psEnc->sCmn.fs_kHz, psEnc->sCmn.pitchEstimationComplexity, psEnc->sCmn.nb_subfr ) == 0 )
+        if( silk_pitch_analysis_core( res, psEncCtrl->pitchL, &psEnc->sCmn.indices.lagIndex, &psEnc->sCmn.indices.contourIndex, 
+                &psEnc->LTPCorr_Q15, psEnc->sCmn.prevLag, psEnc->sCmn.pitchEstimationThreshold_Q16, 
+                ( SKP_int16 )thrhld_Q15, psEnc->sCmn.fs_kHz, psEnc->sCmn.pitchEstimationComplexity, psEnc->sCmn.nb_subfr ) == 0 ) 
         {
             psEnc->sCmn.indices.signalType = TYPE_VOICED;
         } else {

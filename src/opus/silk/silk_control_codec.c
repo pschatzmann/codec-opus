@@ -1,27 +1,27 @@
 /***********************************************************************
-Copyright (c) 2006-2011, Skype Limited. All rights reserved.
-Redistribution and use in source and binary forms, with or without
-modification, (subject to the limitations in the disclaimer below)
+Copyright (c) 2006-2011, Skype Limited. All rights reserved. 
+Redistribution and use in source and binary forms, with or without 
+modification, (subject to the limitations in the disclaimer below) 
 are permitted provided that the following conditions are met:
 - Redistributions of source code must retain the above copyright notice,
 this list of conditions and the following disclaimer.
-- Redistributions in binary form must reproduce the above copyright
-notice, this list of conditions and the following disclaimer in the
+- Redistributions in binary form must reproduce the above copyright 
+notice, this list of conditions and the following disclaimer in the 
 documentation and/or other materials provided with the distribution.
-- Neither the name of Skype Limited, nor the names of specific
-contributors, may be used to endorse or promote products derived from
+- Neither the name of Skype Limited, nor the names of specific 
+contributors, may be used to endorse or promote products derived from 
 this software without specific prior written permission.
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
-BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED 
+BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND 
 CONTRIBUTORS ''AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
-BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
-FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND 
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
 INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
-NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
-USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF 
+USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON 
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***********************************************************************/
 
@@ -37,39 +37,38 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 #include "silk_tuning_parameters.h"
 
-opus_int silk_setup_resamplers(
+SKP_int silk_setup_resamplers(
     silk_encoder_state_Fxx          *psEnc,             /* I/O                      */
-    opus_int                         fs_kHz              /* I                        */
+    SKP_int                         fs_kHz              /* I                        */
 );
 
-opus_int silk_setup_fs(
+SKP_int silk_setup_fs(
     silk_encoder_state_Fxx          *psEnc,             /* I/O                      */
-    opus_int                         fs_kHz,             /* I                        */
-    opus_int                         PacketSize_ms       /* I                        */
+    SKP_int                         fs_kHz,             /* I                        */
+    SKP_int                         PacketSize_ms       /* I                        */
 );
 
-opus_int silk_setup_complexity(
+SKP_int silk_setup_complexity(
     silk_encoder_state              *psEncC,            /* I/O                      */
-    opus_int                         Complexity          /* I                        */
+    SKP_int                         Complexity          /* I                        */
 );
 
-static inline opus_int silk_setup_LBRR(
-    silk_encoder_state              *psEncC,            /* I/O                      */
-    const opus_int32                 TargetRate_bps      /* I                        */
+SKP_INLINE SKP_int silk_setup_LBRR(
+    silk_encoder_state          	*psEncC,            /* I/O                      */
+    const SKP_int32                 TargetRate_bps      /* I                        */
 );
 
 
 /* Control encoder */
-opus_int silk_control_encoder(
+SKP_int silk_control_encoder( 
     silk_encoder_state_Fxx          *psEnc,             /* I/O  Pointer to Silk encoder state           */
     silk_EncControlStruct           *encControl,        /* I:   Control structure                       */
-    const opus_int32                 TargetRate_bps,     /* I    Target max bitrate (bps)                */
-    const opus_int                   allow_bw_switch,    /* I    Flag to allow switching audio bandwidth */
-    const opus_int                   channelNb,           /* I    Channel number                          */
-    const opus_int                   force_fs_kHz
+    const SKP_int32                 TargetRate_bps,     /* I    Target max bitrate (bps)                */
+    const SKP_int                   allow_bw_switch,    /* I    Flag to allow switching audio bandwidth */
+    const SKP_int                   channelNb           /* I    Channel number                          */
 )
 {
-    opus_int   fs_kHz, ret = 0;
+    SKP_int   fs_kHz, ret = 0;
 
     psEnc->sCmn.useDTX                 = encControl->useDTX;
     psEnc->sCmn.useCBR                 = encControl->useCBR;
@@ -97,8 +96,7 @@ opus_int silk_control_encoder(
     /* Determine internal sampling rate         */
     /********************************************/
     fs_kHz = silk_control_audio_bandwidth( &psEnc->sCmn );
-    if (force_fs_kHz)
-       fs_kHz = force_fs_kHz;
+
     /********************************************/
     /* Prepare resampler and buffered data      */
     /********************************************/
@@ -129,26 +127,26 @@ opus_int silk_control_encoder(
     return ret;
 }
 
-opus_int silk_setup_resamplers(
+SKP_int silk_setup_resamplers(
     silk_encoder_state_Fxx          *psEnc,             /* I/O                      */
-    opus_int                         fs_kHz              /* I                        */
+    SKP_int                         fs_kHz              /* I                        */
 )
 {
-    opus_int   ret = SILK_NO_ERROR;
-    opus_int32 nSamples_temp;
-
-    if( psEnc->sCmn.fs_kHz != fs_kHz || psEnc->sCmn.prev_API_fs_Hz != psEnc->sCmn.API_fs_Hz )
+    SKP_int   ret = SILK_NO_ERROR;
+    SKP_int32 nSamples_temp;
+    
+    if( psEnc->sCmn.fs_kHz != fs_kHz || psEnc->sCmn.prev_API_fs_Hz != psEnc->sCmn.API_fs_Hz ) 
     {
         if( psEnc->sCmn.fs_kHz == 0 ) {
             /* Initialize the resampler for enc_API.c preparing resampling from API_fs_Hz to fs_kHz */
             ret += silk_resampler_init( &psEnc->sCmn.resampler_state, psEnc->sCmn.API_fs_Hz, fs_kHz * 1000 );
         } else {
             /* Allocate worst case space for temporary upsampling, 8 to 48 kHz, so a factor 6 */
-            opus_int16 x_buf_API_fs_Hz[ ( 2 * MAX_FRAME_LENGTH_MS + LA_SHAPE_MS ) * MAX_API_FS_KHZ ];
+            SKP_int16 x_buf_API_fs_Hz[ ( 2 * MAX_FRAME_LENGTH_MS + LA_SHAPE_MS ) * MAX_API_FS_KHZ ];
 #ifdef FIXED_POINT
-            opus_int16 *x_bufFIX = psEnc->x_buf;
+            SKP_int16 *x_bufFIX = psEnc->x_buf;
 #else
-            opus_int16 x_bufFIX[ 2 * MAX_FRAME_LENGTH + LA_SHAPE_MAX ];
+            SKP_int16 x_bufFIX[ 2 * MAX_FRAME_LENGTH + LA_SHAPE_MAX ]; 
 #endif
 
             nSamples_temp = SKP_LSHIFT( psEnc->sCmn.frame_length, 1 ) + LA_SHAPE_MS * psEnc->sCmn.fs_kHz;
@@ -176,7 +174,7 @@ opus_int silk_setup_resamplers(
 
             } else {
                 /* Copy data */
-                SKP_memcpy( x_buf_API_fs_Hz, x_bufFIX, nSamples_temp * sizeof( opus_int16 ) );
+                SKP_memcpy( x_buf_API_fs_Hz, x_bufFIX, nSamples_temp * sizeof( SKP_int16 ) );
             }
 
             if( 1000 * fs_kHz != psEnc->sCmn.API_fs_Hz ) {
@@ -194,19 +192,19 @@ opus_int silk_setup_resamplers(
     return ret;
 }
 
-opus_int silk_setup_fs(
+SKP_int silk_setup_fs(
     silk_encoder_state_Fxx          *psEnc,             /* I/O                      */
-    opus_int                         fs_kHz,             /* I                        */
-    opus_int                         PacketSize_ms       /* I                        */
+    SKP_int                         fs_kHz,             /* I                        */
+    SKP_int                         PacketSize_ms       /* I                        */
 )
 {
-    opus_int ret = SILK_NO_ERROR;
+    SKP_int ret = SILK_NO_ERROR;
 
     /* Set packet size */
     if( PacketSize_ms != psEnc->sCmn.PacketSize_ms ) {
         if( ( PacketSize_ms !=  10 ) &&
             ( PacketSize_ms !=  20 ) &&
-            ( PacketSize_ms !=  40 ) &&
+            ( PacketSize_ms !=  40 ) && 
             ( PacketSize_ms !=  60 ) ) {
             ret = SILK_ENC_PACKET_SIZE_NOT_SUPPORTED;
         }
@@ -228,7 +226,7 @@ opus_int silk_setup_fs(
             if( psEnc->sCmn.fs_kHz == 8 ) {
                 psEnc->sCmn.pitch_contour_iCDF = silk_pitch_contour_NB_iCDF;
             } else {
-                psEnc->sCmn.pitch_contour_iCDF = silk_pitch_contour_iCDF;
+                psEnc->sCmn.pitch_contour_iCDF = silk_pitch_contour_iCDF; 
             }
         }
         psEnc->sCmn.PacketSize_ms  = PacketSize_ms;
@@ -265,13 +263,13 @@ opus_int silk_setup_fs(
         psEnc->sCmn.fs_kHz = fs_kHz;
         if( psEnc->sCmn.fs_kHz == 8 ) {
             if( psEnc->sCmn.nb_subfr == MAX_NB_SUBFR ) {
-                psEnc->sCmn.pitch_contour_iCDF = silk_pitch_contour_NB_iCDF;
+                psEnc->sCmn.pitch_contour_iCDF = silk_pitch_contour_NB_iCDF; 
             } else {
                 psEnc->sCmn.pitch_contour_iCDF = silk_pitch_contour_10_ms_NB_iCDF;
             }
         } else {
             if( psEnc->sCmn.nb_subfr == MAX_NB_SUBFR ) {
-                psEnc->sCmn.pitch_contour_iCDF = silk_pitch_contour_iCDF;
+                psEnc->sCmn.pitch_contour_iCDF = silk_pitch_contour_iCDF; 
             } else {
                 psEnc->sCmn.pitch_contour_iCDF = silk_pitch_contour_10_ms_iCDF;
             }
@@ -285,7 +283,7 @@ opus_int silk_setup_fs(
         }
         psEnc->sCmn.subfr_length   = SUB_FRAME_LENGTH_MS * fs_kHz;
         psEnc->sCmn.frame_length   = SKP_SMULBB( psEnc->sCmn.subfr_length, psEnc->sCmn.nb_subfr );
-        psEnc->sCmn.ltp_mem_length = SKP_SMULBB( LTP_MEM_LENGTH_MS, fs_kHz );
+        psEnc->sCmn.ltp_mem_length = SKP_SMULBB( LTP_MEM_LENGTH_MS, fs_kHz ); 
         psEnc->sCmn.la_pitch       = SKP_SMULBB( LA_PITCH_MS, fs_kHz );
         psEnc->sCmn.max_pitch_lag  = SKP_SMULBB( 18, fs_kHz );
         if( psEnc->sCmn.nb_subfr == MAX_NB_SUBFR ) {
@@ -307,16 +305,16 @@ opus_int silk_setup_fs(
 
     /* Check that settings are valid */
     SKP_assert( ( psEnc->sCmn.subfr_length * psEnc->sCmn.nb_subfr ) == psEnc->sCmn.frame_length );
-
+ 
     return ret;
 }
 
-opus_int silk_setup_complexity(
+SKP_int silk_setup_complexity(
     silk_encoder_state              *psEncC,            /* I/O                      */
-    opus_int                         Complexity          /* I                        */
+    SKP_int                         Complexity          /* I                        */
 )
 {
-    opus_int ret = 0;
+    SKP_int ret = 0;
 
     /* Set encoding complexity */
     SKP_assert( Complexity >= 0 && Complexity <= 10 );
@@ -393,13 +391,13 @@ opus_int silk_setup_complexity(
     return ret;
 }
 
-static inline opus_int silk_setup_LBRR(
+SKP_INLINE SKP_int silk_setup_LBRR(
     silk_encoder_state          *psEncC,            /* I/O                      */
-    const opus_int32                 TargetRate_bps      /* I                        */
+    const SKP_int32                 TargetRate_bps      /* I                        */
 )
 {
-    opus_int   ret = SILK_NO_ERROR;
-    opus_int32 LBRR_rate_thres_bps;
+    SKP_int   ret = SILK_NO_ERROR;
+    SKP_int32 LBRR_rate_thres_bps;
 
     psEncC->LBRR_enabled = 0;
     if( psEncC->useInBandFEC && psEncC->PacketLoss_perc > 0 ) {

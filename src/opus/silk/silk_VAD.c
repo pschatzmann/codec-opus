@@ -1,33 +1,29 @@
 /***********************************************************************
-Copyright (c) 2006-2011, Skype Limited. All rights reserved.
-Redistribution and use in source and binary forms, with or without
-modification, (subject to the limitations in the disclaimer below)
+Copyright (c) 2006-2011, Skype Limited. All rights reserved. 
+Redistribution and use in source and binary forms, with or without 
+modification, (subject to the limitations in the disclaimer below) 
 are permitted provided that the following conditions are met:
 - Redistributions of source code must retain the above copyright notice,
 this list of conditions and the following disclaimer.
-- Redistributions in binary form must reproduce the above copyright
-notice, this list of conditions and the following disclaimer in the
+- Redistributions in binary form must reproduce the above copyright 
+notice, this list of conditions and the following disclaimer in the 
 documentation and/or other materials provided with the distribution.
-- Neither the name of Skype Limited, nor the names of specific
-contributors, may be used to endorse or promote products derived from
+- Neither the name of Skype Limited, nor the names of specific 
+contributors, may be used to endorse or promote products derived from 
 this software without specific prior written permission.
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
-BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED 
+BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND 
 CONTRIBUTORS ''AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
-BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
-FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND 
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
 INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
-NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
-USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF 
+USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON 
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***********************************************************************/
-
-#if defined(HAVE_CONFIG_H) || defined(ARDUINO)
-#include "opus/config.h"
-#endif
 
 #include <stdlib.h>
 #include "silk_main.h"
@@ -35,11 +31,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /**********************************/
 /* Initialization of the Silk VAD */
 /**********************************/
-opus_int silk_VAD_Init(                              /* O    Return value, 0 if success                  */
-    silk_VAD_state              *psSilk_VAD         /* I/O  Pointer to Silk VAD state                   */
+SKP_int silk_VAD_Init(                              /* O    Return value, 0 if success                  */ 
+    silk_VAD_state              *psSilk_VAD         /* I/O  Pointer to Silk VAD state                   */ 
 )
 {
-    opus_int b, ret = 0;
+    SKP_int b, ret = 0;
 
     /* reset state memory */
     SKP_memset( psSilk_VAD, 0, sizeof( silk_VAD_state ) );
@@ -66,25 +62,25 @@ opus_int silk_VAD_Init(                              /* O    Return value, 0 if 
 }
 
 /* Weighting factors for tilt measure */
-static const opus_int32 tiltWeights[ VAD_N_BANDS ] = { 30000, 6000, -12000, -12000 };
+static const SKP_int32 tiltWeights[ VAD_N_BANDS ] = { 30000, 6000, -12000, -12000 };
 
 /***************************************/
 /* Get the speech activity level in Q8 */
 /***************************************/
-opus_int silk_VAD_GetSA_Q8(                          /* O    Return value, 0 if success                  */
+SKP_int silk_VAD_GetSA_Q8(                          /* O    Return value, 0 if success                  */
     silk_encoder_state          *psEncC,            /* I/O  Encoder state                               */
-    const opus_int16             pIn[]               /* I    PCM input                                   */
+    const SKP_int16             pIn[]               /* I    PCM input                                   */
 )
 {
-    opus_int   SA_Q15, pSNR_dB_Q7, input_tilt;
-    opus_int   decimated_framelength, dec_subframe_length, dec_subframe_offset, SNR_Q7, i, b, s;
-    opus_int32 sumSquared, smooth_coef_Q16;
-    opus_int16 HPstateTmp;
-    opus_int16 X[ VAD_N_BANDS ][ MAX_FRAME_LENGTH / 2 ];
-    opus_int32 Xnrg[ VAD_N_BANDS ];
-    opus_int32 NrgToNoiseRatio_Q8[ VAD_N_BANDS ];
-    opus_int32 speech_nrg, x_tmp;
-    opus_int   ret = 0;
+    SKP_int   SA_Q15, pSNR_dB_Q7, input_tilt;
+    SKP_int   decimated_framelength, dec_subframe_length, dec_subframe_offset, SNR_Q7, i, b, s;
+    SKP_int32 sumSquared, smooth_coef_Q16;
+    SKP_int16 HPstateTmp;
+    SKP_int16 X[ VAD_N_BANDS ][ MAX_FRAME_LENGTH / 2 ];
+    SKP_int32 Xnrg[ VAD_N_BANDS ];
+    SKP_int32 NrgToNoiseRatio_Q8[ VAD_N_BANDS ];
+    SKP_int32 speech_nrg, x_tmp;
+    SKP_int   ret = 0;
     silk_VAD_state *psSilk_VAD = &psEncC->sVAD;
 
     /* Safety checks */
@@ -97,11 +93,11 @@ opus_int silk_VAD_GetSA_Q8(                          /* O    Return value, 0 if 
     /* Filter and Decimate */
     /***********************/
     /* 0-8 kHz to 0-4 kHz and 4-8 kHz */
-    silk_ana_filt_bank_1( pIn,          &psSilk_VAD->AnaState[  0 ], &X[ 0 ][ 0 ], &X[ 3 ][ 0 ], psEncC->frame_length );
-
+    silk_ana_filt_bank_1( pIn,          &psSilk_VAD->AnaState[  0 ], &X[ 0 ][ 0 ], &X[ 3 ][ 0 ], psEncC->frame_length );        
+    
     /* 0-4 kHz to 0-2 kHz and 2-4 kHz */
     silk_ana_filt_bank_1( &X[ 0 ][ 0 ], &psSilk_VAD->AnaState1[ 0 ], &X[ 0 ][ 0 ], &X[ 2 ][ 0 ], SKP_RSHIFT( psEncC->frame_length, 1 ) );
-
+    
     /* 0-2 kHz to 0-1 kHz and 1-2 kHz */
     silk_ana_filt_bank_1( &X[ 0 ][ 0 ], &psSilk_VAD->AnaState2[ 0 ], &X[ 0 ][ 0 ], &X[ 1 ][ 0 ], SKP_RSHIFT( psEncC->frame_length, 2 ) );
 
@@ -121,7 +117,7 @@ opus_int silk_VAD_GetSA_Q8(                          /* O    Return value, 0 if 
     /*************************************/
     /* Calculate the energy in each band */
     /*************************************/
-    for( b = 0; b < VAD_N_BANDS; b++ ) {
+    for( b = 0; b < VAD_N_BANDS; b++ ) {        
         /* Find the decimated framelength in the non-uniformly divided bands */
         decimated_framelength = SKP_RSHIFT( psEncC->frame_length, SKP_min_int( VAD_N_BANDS - b, VAD_N_BANDS - 1 ) );
 
@@ -154,7 +150,7 @@ opus_int silk_VAD_GetSA_Q8(                          /* O    Return value, 0 if 
 
             dec_subframe_offset += dec_subframe_length;
         }
-        psSilk_VAD->XnrgSubfr[ b ] = sumSquared;
+        psSilk_VAD->XnrgSubfr[ b ] = sumSquared; 
     }
 
     /********************/
@@ -198,7 +194,7 @@ opus_int silk_VAD_GetSA_Q8(                          /* O    Return value, 0 if 
     sumSquared = SKP_DIV32_16( sumSquared, VAD_N_BANDS ); /* Q14 */
 
     /* Root-mean-square approximation, scale to dBs, and write to output pointer */
-    pSNR_dB_Q7 = ( opus_int16 )( 3 * silk_SQRT_APPROX( sumSquared ) ); /* Q7 */
+    pSNR_dB_Q7 = ( SKP_int16 )( 3 * silk_SQRT_APPROX( sumSquared ) ); /* Q7 */
 
     /*********************************/
     /* Speech Probability Estimation */
@@ -221,7 +217,7 @@ opus_int silk_VAD_GetSA_Q8(                          /* O    Return value, 0 if 
 
     /* Power scaling */
     if( speech_nrg <= 0 ) {
-        SA_Q15 = SKP_RSHIFT( SA_Q15, 1 );
+        SA_Q15 = SKP_RSHIFT( SA_Q15, 1 ); 
     } else if( speech_nrg < 32768 ) {
         if( psEncC->frame_length == 10 * psEncC->fs_kHz ) {
             speech_nrg = SKP_LSHIFT_SAT32( speech_nrg, 16 );
@@ -231,7 +227,7 @@ opus_int silk_VAD_GetSA_Q8(                          /* O    Return value, 0 if 
 
         /* square-root */
         speech_nrg = silk_SQRT_APPROX( speech_nrg );
-        SA_Q15 = SKP_SMULWB( 32768 + speech_nrg, SA_Q15 );
+        SA_Q15 = SKP_SMULWB( 32768 + speech_nrg, SA_Q15 ); 
     }
 
     /* Copy the resulting speech activity in Q8 */
@@ -242,14 +238,14 @@ opus_int silk_VAD_GetSA_Q8(                          /* O    Return value, 0 if 
     /***********************************/
     /* Smoothing coefficient */
     smooth_coef_Q16 = SKP_SMULWB( VAD_SNR_SMOOTH_COEF_Q18, SKP_SMULWB( SA_Q15, SA_Q15 ) );
-
+    
     if( psEncC->frame_length == 10 * psEncC->fs_kHz ) {
         smooth_coef_Q16 >>= 1;
     }
 
     for( b = 0; b < VAD_N_BANDS; b++ ) {
         /* compute smoothed energy-to-noise ratio per band */
-        psSilk_VAD->NrgRatioSmth_Q8[ b ] = SKP_SMLAWB( psSilk_VAD->NrgRatioSmth_Q8[ b ],
+        psSilk_VAD->NrgRatioSmth_Q8[ b ] = SKP_SMLAWB( psSilk_VAD->NrgRatioSmth_Q8[ b ], 
             NrgToNoiseRatio_Q8[ b ] - psSilk_VAD->NrgRatioSmth_Q8[ b ], smooth_coef_Q16 );
 
         /* signal to noise ratio in dB per band */
@@ -265,17 +261,17 @@ opus_int silk_VAD_GetSA_Q8(                          /* O    Return value, 0 if 
 /* Noise level estimation */
 /**************************/
 void silk_VAD_GetNoiseLevels(
-    const opus_int32                 pX[ VAD_N_BANDS ],  /* I    subband energies                            */
-    silk_VAD_state              *psSilk_VAD         /* I/O  Pointer to Silk VAD state                   */
+    const SKP_int32                 pX[ VAD_N_BANDS ],  /* I    subband energies                            */
+    silk_VAD_state              *psSilk_VAD         /* I/O  Pointer to Silk VAD state                   */ 
 )
 {
-    opus_int   k;
-    opus_int32 nl, nrg, inv_nrg;
-    opus_int   coef, min_coef;
+    SKP_int   k;
+    SKP_int32 nl, nrg, inv_nrg;
+    SKP_int   coef, min_coef;
 
     /* Initially faster smoothing */
     if( psSilk_VAD->counter < 1000 ) { /* 1000 = 20 sec */
-        min_coef = SKP_DIV32_16( SKP_int16_MAX, SKP_RSHIFT( psSilk_VAD->counter, 4 ) + 1 );
+        min_coef = SKP_DIV32_16( SKP_int16_MAX, SKP_RSHIFT( psSilk_VAD->counter, 4 ) + 1 );  
     } else {
         min_coef = 0;
     }
@@ -284,15 +280,15 @@ void silk_VAD_GetNoiseLevels(
         /* Get old noise level estimate for current band */
         nl = psSilk_VAD->NL[ k ];
         SKP_assert( nl >= 0 );
-
+        
         /* Add bias */
-        nrg = SKP_ADD_POS_SAT32( pX[ k ], psSilk_VAD->NoiseLevelBias[ k ] );
+        nrg = SKP_ADD_POS_SAT32( pX[ k ], psSilk_VAD->NoiseLevelBias[ k ] ); 
         SKP_assert( nrg > 0 );
-
+        
         /* Invert energies */
         inv_nrg = SKP_DIV32( SKP_int32_MAX, nrg );
         SKP_assert( inv_nrg >= 0 );
-
+        
         /* Less update when subband energy is high */
         if( nrg > SKP_LSHIFT( nl, 3 ) ) {
             coef = VAD_NOISE_LEVEL_SMOOTH_COEF_Q16 >> 3;

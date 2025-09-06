@@ -1,27 +1,27 @@
 /***********************************************************************
-Copyright (c) 2006-2011, Skype Limited. All rights reserved.
-Redistribution and use in source and binary forms, with or without
-modification, (subject to the limitations in the disclaimer below)
+Copyright (c) 2006-2011, Skype Limited. All rights reserved. 
+Redistribution and use in source and binary forms, with or without 
+modification, (subject to the limitations in the disclaimer below) 
 are permitted provided that the following conditions are met:
 - Redistributions of source code must retain the above copyright notice,
 this list of conditions and the following disclaimer.
-- Redistributions in binary form must reproduce the above copyright
-notice, this list of conditions and the following disclaimer in the
+- Redistributions in binary form must reproduce the above copyright 
+notice, this list of conditions and the following disclaimer in the 
 documentation and/or other materials provided with the distribution.
-- Neither the name of Skype Limited, nor the names of specific
-contributors, may be used to endorse or promote products derived from
+- Neither the name of Skype Limited, nor the names of specific 
+contributors, may be used to endorse or promote products derived from 
 this software without specific prior written permission.
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
-BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED 
+BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND 
 CONTRIBUTORS ''AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
-BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
-FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND 
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
 INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
-NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
-USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF 
+USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON 
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***********************************************************************/
 
@@ -37,17 +37,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 typedef struct {
     silk_decoder_state          channel_state[ DECODER_NUM_CHANNELS ];
     stereo_dec_state                sStereo;
-    opus_int                         nChannelsAPI;
-    opus_int                         nChannelsInternal;
+    SKP_int                         nChannelsAPI;
+    SKP_int                         nChannelsInternal;
 } silk_decoder;
 
 /*********************/
 /* Decoder functions */
 /*********************/
 
-opus_int silk_Get_Decoder_Size( opus_int32 *decSizeBytes )
+SKP_int silk_Get_Decoder_Size( SKP_int32 *decSizeBytes ) 
 {
-    opus_int ret = SILK_NO_ERROR;
+    SKP_int ret = SILK_NO_ERROR;
 
     *decSizeBytes = sizeof( silk_decoder );
 
@@ -55,11 +55,11 @@ opus_int silk_Get_Decoder_Size( opus_int32 *decSizeBytes )
 }
 
 /* Reset decoder state */
-opus_int silk_InitDecoder(
+SKP_int silk_InitDecoder(
     void* decState                                      /* I/O: State                                          */
 )
 {
-    opus_int n, ret = SILK_NO_ERROR;
+    SKP_int n, ret = SILK_NO_ERROR;
     silk_decoder_state *channel_state = ((silk_decoder *)decState)->channel_state;
 
     for( n = 0; n < DECODER_NUM_CHANNELS; n++ ) {
@@ -70,22 +70,22 @@ opus_int silk_InitDecoder(
 }
 
 /* Decode a frame */
-opus_int silk_Decode(
+SKP_int silk_Decode(
     void*                               decState,       /* I/O: State                                           */
     silk_DecControlStruct*      decControl,     /* I/O: Control Structure                               */
-    opus_int                             lostFlag,       /* I:   0: no loss, 1 loss, 2 decode FEC                */
-    opus_int                             newPacketFlag,  /* I:   Indicates first decoder call for this packet    */
+    SKP_int                             lostFlag,       /* I:   0: no loss, 1 loss, 2 decode FEC                */
+    SKP_int                             newPacketFlag,  /* I:   Indicates first decoder call for this packet    */
     ec_dec                              *psRangeDec,    /* I/O  Compressor data structure                       */
-    opus_int16                           *samplesOut,    /* O:   Decoded output speech vector                    */
-    opus_int32                           *nSamplesOut    /* O:   Number of samples decoded                       */
+    SKP_int16                           *samplesOut,    /* O:   Decoded output speech vector                    */
+    SKP_int32                           *nSamplesOut    /* O:   Number of samples decoded                       */
 )
 {
-    opus_int   i, n, prev_fs_kHz, decode_only_middle = 0, ret = SILK_NO_ERROR;
-    opus_int32 nSamplesOutDec, LBRR_symbol;
-    opus_int16 samplesOut1_tmp[ 2 ][ MAX_FS_KHZ * MAX_FRAME_LENGTH_MS + 2 ];
-    opus_int16 samplesOut2_tmp[ MAX_API_FS_KHZ * MAX_FRAME_LENGTH_MS ];
-    opus_int   MS_pred_Q13[ 2 ] = { 0 };
-    opus_int16 *resample_out_ptr;
+    SKP_int   i, n, prev_fs_kHz, decode_only_middle = 0, ret = SILK_NO_ERROR;
+    SKP_int32 nSamplesOutDec, LBRR_symbol;
+    SKP_int16 samplesOut1_tmp[ 2 ][ MAX_FS_KHZ * MAX_FRAME_LENGTH_MS + 2 ];
+    SKP_int16 samplesOut2_tmp[ MAX_API_FS_KHZ * MAX_FRAME_LENGTH_MS ];
+    SKP_int   MS_pred_Q13[ 2 ] = { 0 };
+    SKP_int16 *resample_out_ptr;
     silk_decoder *psDec = ( silk_decoder * )decState;
     silk_decoder_state *channel_state = psDec->channel_state;
 
@@ -111,7 +111,7 @@ opus_int silk_Decode(
 
     for( n = 0; n < decControl->nChannelsInternal; n++ ) {
         if( channel_state[ n ].nFramesDecoded == 0 ) {
-            opus_int fs_kHz_dec;
+            SKP_int fs_kHz_dec;
             if( decControl->payloadSize_ms == 0 ) {
                 /* Assuming packet loss, use 10 ms */
                 channel_state[ n ].nFramesPerPacket = 1;
@@ -131,7 +131,7 @@ opus_int silk_Decode(
             } else {
                 SKP_assert( 0 );
                 return SILK_DEC_INVALID_FRAME_SIZE;
-            }
+            } 
             fs_kHz_dec = ( decControl->internalSampleRate >> 10 ) + 1;
             if( fs_kHz_dec != 8 && fs_kHz_dec != 12 && fs_kHz_dec != 16 ) {
                 SKP_assert( 0 );
@@ -169,7 +169,7 @@ opus_int silk_Decode(
                 channel_state[ n ].VAD_flags[ i ] = ec_dec_bit_logp(psRangeDec, 1);
             }
             channel_state[ n ].LBRR_flag = ec_dec_bit_logp(psRangeDec, 1);
-        }
+        }        
         /* Decode LBRR flags */
         for( n = 0; n < decControl->nChannelsInternal; n++ ) {
             SKP_memset( channel_state[ n ].LBRR_flags, 0, sizeof( channel_state[ n ].LBRR_flags ) );
@@ -190,12 +190,12 @@ opus_int silk_Decode(
             for( i = 0; i < channel_state[ 0 ].nFramesPerPacket; i++ ) {
                 for( n = 0; n < decControl->nChannelsInternal; n++ ) {
                     if( channel_state[ n ].LBRR_flags[ i ] ) {
-                        opus_int pulses[ MAX_FRAME_LENGTH ];
+                        SKP_int pulses[ MAX_FRAME_LENGTH ];
                         if( decControl->nChannelsInternal == 2 && n == 0 ) {
                             silk_stereo_decode_pred( psRangeDec, &decode_only_middle, MS_pred_Q13 );
                         }
                         silk_decode_indices( &channel_state[ n ], psRangeDec, i, 1 );
-                        silk_decode_pulses( psRangeDec, pulses, channel_state[ n ].indices.signalType,
+                        silk_decode_pulses( psRangeDec, pulses, channel_state[ n ].indices.signalType, 
                             channel_state[ n ].indices.quantOffsetType, channel_state[ n ].frame_length );
                     }
                 }
@@ -205,14 +205,12 @@ opus_int silk_Decode(
 
     /* Get MS predictor index */
     if( decControl->nChannelsInternal == 2 ) {
-        if(   lostFlag == FLAG_DECODE_NORMAL ||
-            ( lostFlag == FLAG_DECODE_LBRR && channel_state[ 0 ].LBRR_flags[ channel_state[ 0 ].nFramesDecoded ] == 1 ) )
+        if(   lostFlag == FLAG_DECODE_NORMAL || 
+            ( lostFlag == FLAG_DECODE_LBRR && channel_state[ 0 ].LBRR_flags[ channel_state[ 0 ].nFramesDecoded ] == 1 ) ) 
         {
             silk_stereo_decode_pred( psRangeDec, &decode_only_middle, MS_pred_Q13 );
         } else {
-            for( n = 0; n < 2; n++ ) {
-                MS_pred_Q13[n] = psDec->sStereo.pred_prev_Q13[n];
-            }
+            SKP_memcpy( MS_pred_Q13, &psDec->sStereo.pred_prev_Q13, sizeof( MS_pred_Q13 ) );
         }
     }
 
@@ -221,7 +219,7 @@ opus_int silk_Decode(
         if( n == 0 || decode_only_middle == 0 ) {
             ret += silk_decode_frame( &channel_state[ n ], psRangeDec, &samplesOut1_tmp[ n ][ 2 ], &nSamplesOutDec, lostFlag );
         } else {
-            SKP_memset( &samplesOut1_tmp[ n ][ 2 ], 0, nSamplesOutDec * sizeof( opus_int16 ) );
+            SKP_memset( &samplesOut1_tmp[ n ][ 2 ], 0, nSamplesOutDec * sizeof( SKP_int16 ) );
         }
     }
 
@@ -230,8 +228,8 @@ opus_int silk_Decode(
         silk_stereo_MS_to_LR( &psDec->sStereo, samplesOut1_tmp[ 0 ], samplesOut1_tmp[ 1 ], MS_pred_Q13, channel_state[ 0 ].fs_kHz, nSamplesOutDec );
     } else {
         /* Buffering */
-        SKP_memcpy( samplesOut1_tmp[ 0 ], psDec->sStereo.sMid, 2 * sizeof( opus_int16 ) );
-        SKP_memcpy( psDec->sStereo.sMid, &samplesOut1_tmp[ 0 ][ nSamplesOutDec ], 2 * sizeof( opus_int16 ) );
+        SKP_memcpy( samplesOut1_tmp[ 0 ], psDec->sStereo.sMid, 2 * sizeof( SKP_int16 ) );
+        SKP_memcpy( psDec->sStereo.sMid, &samplesOut1_tmp[ 0 ][ nSamplesOutDec ], 2 * sizeof( SKP_int16 ) );
     }
 
     /* Number of output samples */
@@ -267,14 +265,14 @@ opus_int silk_Decode(
 }
 
 /* Getting table of contents for a packet */
-opus_int silk_get_TOC(
-    const opus_uint8                     *payload,           /* I    Payload data                                */
-    const opus_int                       nBytesIn,           /* I:   Number of input bytes                       */
-    const opus_int                       nFramesPerPayload,  /* I:   Number of SILK frames per payload           */
+SKP_int silk_get_TOC(
+    const SKP_uint8                     *payload,           /* I    Payload data                                */
+    const SKP_int                       nBytesIn,           /* I:   Number of input bytes                       */
+    const SKP_int                       nFramesPerPayload,  /* I:   Number of SILK frames per payload           */
     silk_TOC_struct                 *Silk_TOC           /* O:   Type of content                             */
 )
 {
-    opus_int i, flags, ret = SILK_NO_ERROR;
+    SKP_int i, flags, ret = SILK_NO_ERROR;
 
     if( nBytesIn < 1 ) {
         return -1;

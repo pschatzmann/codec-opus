@@ -1,27 +1,27 @@
 /***********************************************************************
-Copyright (c) 2006-2011, Skype Limited. All rights reserved.
-Redistribution and use in source and binary forms, with or without
-modification, (subject to the limitations in the disclaimer below)
+Copyright (c) 2006-2011, Skype Limited. All rights reserved. 
+Redistribution and use in source and binary forms, with or without 
+modification, (subject to the limitations in the disclaimer below) 
 are permitted provided that the following conditions are met:
 - Redistributions of source code must retain the above copyright notice,
 this list of conditions and the following disclaimer.
-- Redistributions in binary form must reproduce the above copyright
-notice, this list of conditions and the following disclaimer in the
+- Redistributions in binary form must reproduce the above copyright 
+notice, this list of conditions and the following disclaimer in the 
 documentation and/or other materials provided with the distribution.
-- Neither the name of Skype Limited, nor the names of specific
-contributors, may be used to endorse or promote products derived from
+- Neither the name of Skype Limited, nor the names of specific 
+contributors, may be used to endorse or promote products derived from 
 this software without specific prior written permission.
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
-BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED 
+BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND 
 CONTRIBUTORS ''AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
-BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
-FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
-COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND 
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
 INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
-NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
-USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF 
+USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON 
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***********************************************************************/
 
@@ -44,28 +44,28 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /* Encoder functions                    */
 /****************************************/
 
-opus_int silk_Get_Encoder_Size( opus_int32 *encSizeBytes )
+SKP_int silk_Get_Encoder_Size( SKP_int32 *encSizeBytes )
 {
-    opus_int ret = SILK_NO_ERROR;
-
+    SKP_int ret = SILK_NO_ERROR;
+    
     *encSizeBytes = sizeof( silk_encoder );
-
+    
     return ret;
 }
 
 /*************************/
 /* Init or Reset encoder */
 /*************************/
-opus_int silk_InitEncoder(
+SKP_int silk_InitEncoder(
     void                            *encState,          /* I/O: State                                           */
-    silk_EncControlStruct           *encStatus          /* O:   Control structure                               */
+    silk_EncControlStruct   		*encStatus          /* O:   Control structure                               */
 )
 {
     silk_encoder *psEnc;
-    opus_int n, ret = SILK_NO_ERROR;
+    SKP_int n, ret = SILK_NO_ERROR;
 
     psEnc = (silk_encoder *)encState;
-
+    
     /* Reset encoder */
     SKP_memset( psEnc, 0, sizeof( silk_encoder ) );
     for( n = 0; n < ENCODER_NUM_CHANNELS; n++ ) {
@@ -88,12 +88,12 @@ opus_int silk_InitEncoder(
 /***************************************/
 /* Read control structure from encoder */
 /***************************************/
-opus_int silk_QueryEncoder(
+SKP_int silk_QueryEncoder(
     const void *encState,                       /* I:   State Vector                                    */
     silk_EncControlStruct *encStatus            /* O:   Control Structure                               */
 )
 {
-    opus_int ret = SILK_NO_ERROR;
+    SKP_int ret = SILK_NO_ERROR;
     silk_encoder_state_Fxx *state_Fxx;
     silk_encoder *psEnc = (silk_encoder *)encState;
 
@@ -123,22 +123,23 @@ opus_int silk_QueryEncoder(
 /**************************/
 /* Encode frame with Silk */
 /**************************/
-opus_int silk_Encode(
+SKP_int silk_Encode( 
     void                                *encState,      /* I/O: State                                           */
     silk_EncControlStruct               *encControl,    /* I:   Control structure                               */
-    const opus_int16                     *samplesIn,     /* I:   Speech sample input vector                      */
-    opus_int                             nSamplesIn,     /* I:   Number of samples in input vector               */
+    const SKP_int16                     *samplesIn,     /* I:   Speech sample input vector                      */
+    SKP_int                             nSamplesIn,     /* I:   Number of samples in input vector               */
     ec_enc                              *psRangeEnc,    /* I/O  Compressor data structure                       */
-    opus_int32                           *nBytesOut,     /* I/O: Number of bytes in payload (input: Max bytes)   */
-    const opus_int                       prefillFlag     /* I:   Flag to indicate prefilling buffers; no coding  */
+    SKP_int32                           *nBytesOut,     /* I/O: Number of bytes in payload (input: Max bytes)   */
+    const SKP_int                       prefillFlag     /* I:   Flag to indicate prefilling buffers; no coding  */
 )
 {
-    opus_int   n, i, nBits, flags, tmp_payloadSize_ms = 0, tmp_complexity = 0, ret = 0;
-    opus_int   nSamplesToBuffer, nBlocksOf10ms, nSamplesFromInput = 0;
-    opus_int   speech_act_thr_for_switch_Q8;
-    opus_int32 TargetRate_bps, MStargetRates_bps[ 2 ], channelRate_bps, LBRR_symbol;
+    SKP_int   n, i, nBits, flags, tmp_payloadSize_ms = 0, tmp_complexity = 0, ret = 0;
+    SKP_int   nSamplesToBuffer, nBlocksOf10ms, nSamplesFromInput = 0;
+    SKP_int   speech_act_thr_for_switch_Q8;
+    SKP_int32 TargetRate_bps, MStargetRates_bps[ 2 ], channelRate_bps, LBRR_symbol;
     silk_encoder *psEnc = ( silk_encoder * )encState;
-    opus_int16 buf[ MAX_FRAME_LENGTH_MS * MAX_API_FS_KHZ ];
+    SKP_int   MS_predictorIx[ 2 ] = { 0 };
+    SKP_int16 buf[ MAX_FRAME_LENGTH_MS * MAX_API_FS_KHZ ];
 
     /* Check values in encoder control structure */
     if( ( ret = check_control_input( encControl ) != 0 ) ) {
@@ -192,7 +193,7 @@ opus_int silk_Encode(
             return ret;
         }
         /* Make sure no more than one packet can be produced */
-        if( 1000 * (opus_int32)nSamplesIn > encControl->payloadSize_ms * encControl->API_sampleRate ) {
+        if( 1000 * (SKP_int32)nSamplesIn > encControl->payloadSize_ms * encControl->API_sampleRate ) {
             ret = SILK_ENC_INPUT_INVALID_NO_OF_SAMPLES;
             SKP_assert( 0 );
             return ret;
@@ -201,9 +202,7 @@ opus_int silk_Encode(
 
     TargetRate_bps = SKP_RSHIFT32( encControl->bitRate, encControl->nChannelsInternal - 1 );
     for( n = 0; n < encControl->nChannelsInternal; n++ ) {
-        /* JMV: Force the side channel to the same rate as the mid. Is this the right way? */
-        int force_fs_kHz = (n==1) ? psEnc->state_Fxx[0].sCmn.fs_kHz : 0;
-        if( ( ret = silk_control_encoder( &psEnc->state_Fxx[ n ], encControl, TargetRate_bps, psEnc->allowBandwidthSwitch, n, force_fs_kHz ) ) != 0 ) {
+        if( ( ret = silk_control_encoder( &psEnc->state_Fxx[ n ], encControl, TargetRate_bps, psEnc->allowBandwidthSwitch, n ) ) != 0 ) {
             SKP_assert( 0 );
             return ret;
         }
@@ -220,7 +219,7 @@ opus_int silk_Encode(
             for( n = 0; n < nSamplesFromInput; n++ ) {
                 buf[ n ] = samplesIn[ 2 * n ];
             }
-            ret += silk_resampler( &psEnc->state_Fxx[ 0 ].sCmn.resampler_state,
+            ret += silk_resampler( &psEnc->state_Fxx[ 0 ].sCmn.resampler_state, 
                 &psEnc->state_Fxx[ 0 ].sCmn.inputBuf[ psEnc->state_Fxx[ 0 ].sCmn.inputBufIx ], buf, nSamplesFromInput );
             psEnc->state_Fxx[ 0 ].sCmn.inputBufIx += nSamplesToBuffer;
 
@@ -229,20 +228,20 @@ opus_int silk_Encode(
             for( n = 0; n < nSamplesFromInput; n++ ) {
                 buf[ n ] = samplesIn[ 2 * n + 1 ];
             }
-            ret += silk_resampler( &psEnc->state_Fxx[ 1 ].sCmn.resampler_state,
+            ret += silk_resampler( &psEnc->state_Fxx[ 1 ].sCmn.resampler_state, 
                 &psEnc->state_Fxx[ 1 ].sCmn.inputBuf[ psEnc->state_Fxx[ 1 ].sCmn.inputBufIx ], buf, nSamplesFromInput );
             psEnc->state_Fxx[ 1 ].sCmn.inputBufIx += nSamplesToBuffer;
         } else if( encControl->nChannelsAPI == 2 && encControl->nChannelsInternal == 1 ) {
             /* Combine left and right channels before resampling */
             for( n = 0; n < nSamplesFromInput; n++ ) {
-                buf[ n ] = (opus_int16)SKP_RSHIFT_ROUND( samplesIn[ 2 * n ] + samplesIn[ 2 * n + 1 ],  1 );
+                buf[ n ] = (SKP_int16)SKP_RSHIFT_ROUND( samplesIn[ 2 * n ] + samplesIn[ 2 * n + 1 ],  1 );
             }
-            ret += silk_resampler( &psEnc->state_Fxx[ 0 ].sCmn.resampler_state,
+            ret += silk_resampler( &psEnc->state_Fxx[ 0 ].sCmn.resampler_state, 
                 &psEnc->state_Fxx[ 0 ].sCmn.inputBuf[ psEnc->state_Fxx[ 0 ].sCmn.inputBufIx ], buf, nSamplesFromInput );
             psEnc->state_Fxx[ 0 ].sCmn.inputBufIx += nSamplesToBuffer;
         } else {
             SKP_assert( encControl->nChannelsAPI == 1 && encControl->nChannelsInternal == 1 );
-            ret += silk_resampler( &psEnc->state_Fxx[ 0 ].sCmn.resampler_state,
+            ret += silk_resampler( &psEnc->state_Fxx[ 0 ].sCmn.resampler_state, 
                 &psEnc->state_Fxx[ 0 ].sCmn.inputBuf[ psEnc->state_Fxx[ 0 ].sCmn.inputBufIx ], samplesIn, nSamplesFromInput );
             psEnc->state_Fxx[ 0 ].sCmn.inputBufIx += nSamplesToBuffer;
         }
@@ -261,7 +260,7 @@ opus_int silk_Encode(
             /* Deal with LBRR data */
             if( psEnc->state_Fxx[ 0 ].sCmn.nFramesEncoded == 0 && !prefillFlag ) {
                 /* Create space at start of payload for VAD and FEC flags */
-                opus_uint8 iCDF[ 2 ] = { 0, 0 };
+                SKP_uint8 iCDF[ 2 ] = { 0, 0 };
                 iCDF[ 0 ] = 256 - SKP_RSHIFT( 256, ( psEnc->state_Fxx[ 0 ].sCmn.nFramesPerPacket + 1 ) * encControl->nChannelsInternal );
                 ec_enc_icdf( psRangeEnc, 0, iCDF, 8 );
 
@@ -280,20 +279,20 @@ opus_int silk_Encode(
 
                 /* Code LBRR indices and excitation signals */
                 for( i = 0; i < psEnc->state_Fxx[ 0 ].sCmn.nFramesPerPacket; i++ ) {
-                    for( n = 0; n < encControl->nChannelsInternal; n++ ) {
+                    for( n = 0; n < encControl->nChannelsInternal; n++ ) {                
                         if( psEnc->state_Fxx[ n ].sCmn.LBRR_flags[ i ] ) {
                             if( encControl->nChannelsInternal == 2 && n == 0 ) {
                                 silk_stereo_encode_pred( psRangeEnc, psEnc->sStereo.ix[ i ] );
                             }
                             silk_encode_indices( &psEnc->state_Fxx[ n ].sCmn, psRangeEnc, i, 1 );
-                            silk_encode_pulses( psRangeEnc, psEnc->state_Fxx[ n ].sCmn.indices_LBRR[i].signalType, psEnc->state_Fxx[ n ].sCmn.indices_LBRR[i].quantOffsetType,
+                            silk_encode_pulses( psRangeEnc, psEnc->state_Fxx[ n ].sCmn.indices_LBRR[i].signalType, psEnc->state_Fxx[ n ].sCmn.indices_LBRR[i].quantOffsetType, 
                                 psEnc->state_Fxx[ n ].sCmn.pulses_LBRR[ i ], psEnc->state_Fxx[ n ].sCmn.frame_length );
                         }
                     }
                 }
 
                 /* Reset LBRR flags */
-                for( n = 0; n < encControl->nChannelsInternal; n++ ) {
+                for( n = 0; n < encControl->nChannelsInternal; n++ ) {                
                     SKP_memset( psEnc->state_Fxx[ n ].sCmn.LBRR_flags, 0, sizeof( psEnc->state_Fxx[ n ].sCmn.LBRR_flags ) );
                 }
             }
@@ -322,15 +321,15 @@ opus_int silk_Encode(
 
             /* Convert Left/Right to Mid/Side */
             if( encControl->nChannelsInternal == 2 ) {
-                silk_stereo_LR_to_MS( &psEnc->sStereo, psEnc->state_Fxx[ 0 ].sCmn.inputBuf, psEnc->state_Fxx[ 1 ].sCmn.inputBuf,
-                    psEnc->sStereo.ix[ psEnc->state_Fxx[ 0 ].sCmn.nFramesEncoded ], MStargetRates_bps, TargetRate_bps,
+                silk_stereo_LR_to_MS( &psEnc->sStereo, psEnc->state_Fxx[ 0 ].sCmn.inputBuf, psEnc->state_Fxx[ 1 ].sCmn.inputBuf, 
+                    psEnc->sStereo.ix[ psEnc->state_Fxx[ 0 ].sCmn.nFramesEncoded ], MStargetRates_bps, TargetRate_bps, 
                     psEnc->state_Fxx[ 0 ].sCmn.speech_activity_Q8, psEnc->state_Fxx[ 0 ].sCmn.fs_kHz, psEnc->state_Fxx[ 0 ].sCmn.frame_length );
                 if (!prefillFlag)
                     silk_stereo_encode_pred( psRangeEnc, psEnc->sStereo.ix[ psEnc->state_Fxx[ 0 ].sCmn.nFramesEncoded ] );
             } else {
                 /* Buffering */
-                SKP_memcpy( &psEnc->state_Fxx[ 0 ].sCmn.inputBuf[ -2 ], psEnc->sStereo.sMid, 2 * sizeof( opus_int16 ) );
-                SKP_memcpy( psEnc->sStereo.sMid, &psEnc->state_Fxx[ 0 ].sCmn.inputBuf[ psEnc->state_Fxx[ 0 ].sCmn.frame_length - 2 ], 2 * sizeof( opus_int16 ) );
+                SKP_memcpy( &psEnc->state_Fxx[ 0 ].sCmn.inputBuf[ -2 ], psEnc->sStereo.sMid, 2 * sizeof( SKP_int16 ) );
+                SKP_memcpy( psEnc->sStereo.sMid, &psEnc->state_Fxx[ 0 ].sCmn.inputBuf[ psEnc->state_Fxx[ 0 ].sCmn.frame_length - 2 ], 2 * sizeof( SKP_int16 ) );
             }
 
             /* Encode */
@@ -377,7 +376,7 @@ opus_int silk_Encode(
                 psEnc->nBitsExceeded  = SKP_LIMIT( psEnc->nBitsExceeded, 0, 10000 );
 
                 /* Update flag indicating if bandwidth switching is allowed */
-                speech_act_thr_for_switch_Q8 = SKP_SMLAWB( SILK_FIX_CONST( SPEECH_ACTIVITY_DTX_THRES, 8 ),
+                speech_act_thr_for_switch_Q8 = SKP_SMLAWB( SILK_FIX_CONST( SPEECH_ACTIVITY_DTX_THRES, 8 ), 
                     SILK_FIX_CONST( ( 1 - SPEECH_ACTIVITY_DTX_THRES ) / MAX_BANDWIDTH_SWITCH_DELAY_MS, 16 + 8 ), psEnc->timeSinceSwitchAllowed_ms );
                 if( psEnc->state_Fxx[ 0 ].sCmn.speech_activity_Q8 < speech_act_thr_for_switch_Q8 ) {
                     psEnc->allowBandwidthSwitch = 1;
