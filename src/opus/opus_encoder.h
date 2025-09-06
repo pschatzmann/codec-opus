@@ -1,5 +1,5 @@
-/* Copyright (c) 2011 Xiph.Org Foundation, Skype Limited
-   Written by Jean-Marc Valin and Koen Vos */
+/* Copyright (c) 2010 Xiph.Org Foundation
+   Written by Jean-Marc Valin */
 /*
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
@@ -25,21 +25,48 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef OPUS_ENCODER_H
+#define OPUS_ENCODER_H
 
-const char *opus_strerror(int error)
-{
-   static const char *error_strings[8] = {
-      "success",
-      "invalid argument",
-      "buffer too small",
-      "internal error",
-      "corrupted stream",
-      "request not implemented",
-      "invalid state",
-      "memory allocation failed"
-   };
-   if (error > 0 || error < -7)
-      return "unknown error";
-   else
-      return error_strings[-error];
-}
+#include "opus/celt/celt.h"
+#include "opus.h"
+#include "opus/silk/silk_API.h"
+
+/* FIXME: This is only valid for 48 kHz */
+#define MAX_ENCODER_BUFFER 480
+
+struct OpusEncoder {
+	int          celt_enc_offset;
+	int          silk_enc_offset;
+	silk_EncControlStruct silk_mode;
+    int          hybrid_stereo_width_Q14;
+	int          channels;
+	int          stream_channels;
+    int          force_mono;
+
+    int          mode;
+    int          user_mode;
+    int          prev_mode;
+    int          signal_type;
+	int          bandwidth;
+	int          user_bandwidth;
+	int          voice_ratio;
+    /* Sampling rate (at the API level) */
+    int          Fs;
+    int          use_vbr;
+    int          vbr_constraint;
+    int          bitrate_bps;
+    int          user_bitrate_bps;
+    int          encoder_buffer;
+    int          delay_compensation;
+    int          first;
+    short        delay_buffer[MAX_ENCODER_BUFFER*2];
+
+#ifdef OPUS_TEST_RANGE_CODER_STATE
+    int          rangeFinal;
+#endif
+};
+
+
+#endif /* OPUS_ENCODER_H */
+

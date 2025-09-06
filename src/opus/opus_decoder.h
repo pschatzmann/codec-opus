@@ -1,5 +1,5 @@
-/* Copyright (c) 2011 Xiph.Org Foundation, Skype Limited
-   Written by Jean-Marc Valin and Koen Vos */
+/* Copyright (c) 2010 Xiph.Org Foundation
+   Written by Jean-Marc Valin */
 /*
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
@@ -25,21 +25,34 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef OPUS_DECODER_H
+#define OPUS_DECODER_H
 
-const char *opus_strerror(int error)
-{
-   static const char *error_strings[8] = {
-      "success",
-      "invalid argument",
-      "buffer too small",
-      "internal error",
-      "corrupted stream",
-      "request not implemented",
-      "invalid state",
-      "memory allocation failed"
-   };
-   if (error > 0 || error < -7)
-      return "unknown error";
-   else
-      return error_strings[-error];
-}
+#include "opus/celt/celt.h"
+#include "opus.h"
+
+struct OpusDecoder {
+	int          celt_dec_offset;
+	int          silk_dec_offset;
+	int          channels;
+	int          stream_channels;
+
+    int          bandwidth;
+    /* Sampling rate (at the API level) */
+    int          Fs;
+    int          mode;
+    int          prev_mode;
+    int          frame_size;
+    int          prev_redundancy;
+
+#ifdef OPUS_TEST_RANGE_CODER_STATE
+    int          rangeFinal;
+#endif
+};
+
+static inline short SAT16(int x) {
+    return x > 32767 ? 32767 : x < -32768 ? -32768 : (short)x;
+};
+
+#endif /* OPUS_DECODER_H */
+
