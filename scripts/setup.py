@@ -13,6 +13,8 @@ import subprocess
 import sys
 import time
 import re
+import shutil
+from packaging import version
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 OPUS_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, '../original/opus'))
@@ -28,6 +30,18 @@ def get_opus_tags():
 def get_local_tags():
     result = subprocess.run(['git', 'tag'], stdout=subprocess.PIPE, text=True, check=True)
     return set(tag.strip() for tag in result.stdout.splitlines() if tag.strip())
+
+def is_version_at_least_1_5(tag):
+    """Check if the version tag is v1.5 or later."""
+    try:
+        # Remove 'v' prefix and parse version
+        version_str = tag[1:] if tag.startswith('v') else tag
+        tag_version = version.parse(version_str)
+        min_version = version.parse("1.5")
+        return tag_version >= min_version
+    except Exception:
+        # If parsing fails, skip the tag
+        return False
 
 def checkout():
     original_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../original'))
@@ -65,6 +79,9 @@ def main():
         if not tag.startswith('v'):
             print(f"Tag '{tag}' does not start with 'v', skipping.")
             continue
+        if not is_version_at_least_1_5(tag):
+            print(f"Tag '{tag}' is before v1.5, skipping.")
+            continue
         if '-' in tag:
             print(f"Tag '{tag}' contains '-', skipping.")
             continue
@@ -76,6 +93,12 @@ def main():
             continue
         print(f"Checking out opus tag '{tag}'...")
         subprocess.run(['git', 'checkout', tag], cwd=OPUS_DIR, check=True)
+
+        # Clean up any existing src/opus directory
+        src_opus_path = os.path.join(SCRIPT_DIR, '..', 'src', 'opus')
+        if os.path.exists(src_opus_path):
+            print(f"Removing existing src/opus directory...")
+            shutil.rmtree(src_opus_path)
 
         update_library_properties_version(tag)
         
