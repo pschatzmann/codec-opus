@@ -37,7 +37,6 @@
 #include "os_support.h"
 #include "stack_alloc.h"
 #include "quant_bands.h"
-#include "cpu_support.h"
 
 static const opus_int16 eband5ms[] = {
 /*0  200 400 600 800  1k 1.2 1.4 1.6  2k 2.4 2.8 3.2  4k 4.8 5.6 6.8  8k 9.6 12k 15.6 */
@@ -173,10 +172,7 @@ static void compute_allocation_table(CELTMode *mode)
    mode->nbAllocVectors = BITALLOC_SIZE;
    allocVectors = opus_alloc(sizeof(unsigned char)*(BITALLOC_SIZE*mode->nbEBands));
    if (allocVectors==NULL)
-   {
-      mode->allocVectors = NULL;
       return;
-   }
 
    /* Check for standard mode */
    if (mode->Fs == 400*(opus_int32)mode->shortMdctSize)
@@ -230,10 +226,9 @@ CELTMode *opus_custom_mode_create(opus_int32 Fs, int frame_size, int *error)
 #ifdef CUSTOM_MODES
    CELTMode *mode=NULL;
    int res;
-   celt_coef *window;
+   opus_val16 *window;
    opus_int16 *logN;
    int LM;
-   int arch = opus_select_arch();
    ALLOC_STACK;
 #if !defined(VAR_ARRAYS) && !defined(USE_ALLOCA)
    if (global_stack==NULL)
@@ -350,14 +345,6 @@ CELTMode *opus_custom_mode_create(opus_int32 Fs, int frame_size, int *error)
    mode->eBands = compute_ebands(Fs, mode->shortMdctSize, res, &mode->nbEBands);
    if (mode->eBands==NULL)
       goto failure;
-#if !defined(SMALL_FOOTPRINT)
-   /* Make sure we don't allocate a band larger than our PVQ table.
-      208 should be enough, but let's be paranoid. */
-   if ((mode->eBands[mode->nbEBands] - mode->eBands[mode->nbEBands-1])<<LM >
-    208) {
-       goto failure;
-   }
-#endif
 
    mode->effEBands = mode->nbEBands;
    while (mode->eBands[mode->effEBands] > mode->shortMdctSize)
@@ -370,7 +357,7 @@ CELTMode *opus_custom_mode_create(opus_int32 Fs, int frame_size, int *error)
    if (mode->allocVectors==NULL)
       goto failure;
 
-   window = (celt_coef*)opus_alloc(mode->overlap*sizeof(*window));
+   window = (opus_val16*)opus_alloc(mode->overlap*sizeof(opus_val16));
    if (window==NULL)
       goto failure;
 
@@ -378,13 +365,8 @@ CELTMode *opus_custom_mode_create(opus_int32 Fs, int frame_size, int *error)
    for (i=0;i<mode->overlap;i++)
       window[i] = Q15ONE*sin(.5*M_PI* sin(.5*M_PI*(i+.5)/mode->overlap) * sin(.5*M_PI*(i+.5)/mode->overlap));
 #else
-# ifdef ENABLE_QEXT
-   for (i=0;i<mode->overlap;i++)
-      window[i] = MIN32(2147483647, 2147483648*sin(.5*M_PI* sin(.5*M_PI*(i+.5)/mode->overlap) * sin(.5*M_PI*(i+.5)/mode->overlap)));
-# else
    for (i=0;i<mode->overlap;i++)
       window[i] = MIN32(32767,floor(.5+32768.*sin(.5*M_PI* sin(.5*M_PI*(i+.5)/mode->overlap) * sin(.5*M_PI*(i+.5)/mode->overlap))));
-# endif
 #endif
    mode->window = window;
 
@@ -399,7 +381,7 @@ CELTMode *opus_custom_mode_create(opus_int32 Fs, int frame_size, int *error)
    compute_pulse_cache(mode, mode->maxLM);
 
    if (clt_mdct_init(&mode->mdct, 2*mode->shortMdctSize*mode->nbShortMdcts,
-           mode->maxLM, arch) == 0)
+           mode->maxLM) == 0)
       goto failure;
 
    if (error)
@@ -418,8 +400,6 @@ failure:
 #ifdef CUSTOM_MODES
 void opus_custom_mode_destroy(CELTMode *mode)
 {
-   int arch = opus_select_arch();
-
    if (mode == NULL)
       return;
 #ifndef CUSTOM_MODES_ONLY
@@ -435,7 +415,7 @@ void opus_custom_mode_destroy(CELTMode *mode)
    }
 #endif /* CUSTOM_MODES_ONLY */
    opus_free((opus_int16*)mode->eBands);
-   opus_free((unsigned char*)mode->allocVectors);
+   opus_free((opus_int16*)mode->allocVectors);
 
    opus_free((opus_val16*)mode->window);
    opus_free((opus_int16*)mode->logN);
@@ -443,7 +423,7 @@ void opus_custom_mode_destroy(CELTMode *mode)
    opus_free((opus_int16*)mode->cache.index);
    opus_free((unsigned char*)mode->cache.bits);
    opus_free((unsigned char*)mode->cache.caps);
-   clt_mdct_clear(&mode->mdct, arch);
+   clt_mdct_clear(&mode->mdct);
 
    opus_free((CELTMode *)mode);
 }

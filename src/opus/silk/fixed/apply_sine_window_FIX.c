@@ -8,11 +8,11 @@ this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the
+- Neither the name of Internet Society, IETF or IETF Trust, nor the 
 names of specific contributors, may be used to endorse or promote
 products derived from this software without specific prior written
 permission.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
 ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
@@ -57,15 +57,15 @@ void silk_apply_sine_window(
     opus_int   k, f_Q16, c_Q16;
     opus_int32 S0_Q16, S1_Q16;
 
-    celt_assert( win_type == 1 || win_type == 2 );
+    silk_assert( win_type == 1 || win_type == 2 );
 
     /* Length must be in a range from 16 to 120 and a multiple of 4 */
-    celt_assert( length >= 16 && length <= 120 );
-    celt_assert( ( length & 3 ) == 0 );
+    silk_assert( length >= 16 && length <= 120 );
+    silk_assert( ( length & 3 ) == 0 );
 
     /* Frequency */
     k = ( length >> 2 ) - 4;
-    celt_assert( k >= 0 && k <= 26 );
+    silk_assert( k >= 0 && k <= 26 );
     f_Q16 = (opus_int)freq_table_Q16[ k ];
 
     /* Factor used for cosine approximation */

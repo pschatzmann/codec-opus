@@ -8,11 +8,11 @@ this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the
+- Neither the name of Internet Society, IETF or IETF Trust, nor the 
 names of specific contributors, may be used to endorse or promote
 products derived from this software without specific prior written
 permission.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
 ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
@@ -35,16 +35,16 @@ POSSIBILITY OF SUCH DAMAGE.
 /* Downsample by a factor 2 */
 void silk_resampler_down2(
     opus_int32                  *S,                 /* I/O  State vector [ 2 ]                                          */
-    opus_int16                  *out,               /* O    Output signal [ floor(len/2) ]                              */
-    const opus_int16            *in,                /* I    Input signal [ len ]                                        */
+    opus_int16                  *out,               /* O    Output signal [ len ]                                       */
+    const opus_int16            *in,                /* I    Input signal [ floor(len/2) ]                               */
     opus_int32                  inLen               /* I    Number of input samples                                     */
 )
 {
     opus_int32 k, len2 = silk_RSHIFT32( inLen, 1 );
     opus_int32 in32, out32, Y, X;
 
-    celt_assert( silk_resampler_down2_0 > 0 );
-    celt_assert( silk_resampler_down2_1 < 0 );
+    silk_assert( silk_resampler_down2_0 > 0 );
+    silk_assert( silk_resampler_down2_1 < 0 );
 
     /* Internal variables and state are in Q10 format */
     for( k = 0; k < len2; k++ ) {
@@ -71,3 +71,4 @@ void silk_resampler_down2(
         out[ k ] = (opus_int16)silk_SAT16( silk_RSHIFT_ROUND( out32, 11 ) );
     }
 }
+

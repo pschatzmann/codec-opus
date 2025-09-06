@@ -131,7 +131,7 @@ void compute_pulse_cache(CELTMode *m, int LM)
    for (i=0;i<nbEntries;i++)
    {
       unsigned char *ptr = bits+entryI[i];
-      opus_int16 tmp[CELT_MAX_PULSES+1];
+      opus_int16 tmp[MAX_PULSES+1];
       get_required_bits(tmp, entryN[i], get_pulses(entryK[i]), BITRES);
       for (j=1;j<=entryK[i];j++)
          ptr[j] = tmp[get_pulses(j)]-1;
@@ -189,7 +189,7 @@ void compute_pulse_cache(CELTMode *m, int LM)
                   /* Offset the number of qtheta bits by log2(N)/2
                       + QTHETA_OFFSET compared to their "fair share" of
                       total/N */
-                  offset = ((m->logN[j]+(opus_int32)((opus_uint32)(LM0+k)<<BITRES))>>1)-QTHETA_OFFSET;
+                  offset = ((m->logN[j]+((LM0+k)<<BITRES))>>1)-QTHETA_OFFSET;
                   /* The number of qtheta bits we'll allocate if the remainder
                       is to be max_bits.
                      The average measured cost for theta is 0.89701 times qb,
@@ -245,10 +245,10 @@ void compute_pulse_cache(CELTMode *m, int LM)
 
 #define ALLOC_STEPS 6
 
-static OPUS_INLINE int interp_bits2pulses(const CELTMode *m, int start, int end, int skip_start,
+static inline int interp_bits2pulses(const CELTMode *m, int start, int end, int skip_start,
       const int *bits1, const int *bits2, const int *thresh, const int *cap, opus_int32 total, opus_int32 *_balance,
       int skip_rsv, int *intensity, int intensity_rsv, int *dual_stereo, int dual_stereo_rsv, int *bits,
-      int *ebits, int *fine_priority, int C, int LM, ec_ctx *ec, int encode, int prev, int signalBandwidth)
+      int *ebits, int *fine_priority, int C, int LM, ec_ctx *ec, int encode, int prev)
 {
    opus_int32 psum;
    int lo, hi;
@@ -296,7 +296,7 @@ static OPUS_INLINE int interp_bits2pulses(const CELTMode *m, int start, int end,
    done = 0;
    for (j=end;j-->start;)
    {
-      int tmp = bits1[j] + ((opus_int32)lo*bits2[j]>>ALLOC_STEPS);
+      int tmp = bits1[j] + (lo*bits2[j]>>ALLOC_STEPS);
       if (tmp < thresh[j] && !done)
       {
          if (tmp >= alloc_floor)
@@ -333,7 +333,7 @@ static OPUS_INLINE int interp_bits2pulses(const CELTMode *m, int start, int end,
       /*Figure out how many left-over bits we would be adding to this band.
         This can include bits we've stolen back from higher, skipped bands.*/
       left = total-psum;
-      percoeff = celt_udiv(left, m->eBands[codedBands]-m->eBands[start]);
+      percoeff = left/(m->eBands[codedBands]-m->eBands[start]);
       left -= (m->eBands[codedBands]-m->eBands[start])*percoeff;
       rem = IMAX(left-(m->eBands[j]-m->eBands[start]),0);
       band_width = m->eBands[codedBands]-m->eBands[j];
@@ -348,19 +348,12 @@ static OPUS_INLINE int interp_bits2pulses(const CELTMode *m, int start, int end,
             /*This if() block is the only part of the allocation function that
                is not a mandatory part of the bitstream: any bands we choose to
                skip here must be explicitly signaled.*/
-            int depth_threshold;
-            /*We choose a threshold with some hysteresis to keep bands from
-               fluctuating in and out, but we try not to fold below a certain point. */
-            if (codedBands > 17)
-               depth_threshold = j<prev ? 7 : 9;
-            else
-               depth_threshold = 0;
+            /*Choose a threshold with some hysteresis to keep bands from
+               fluctuating in and out.*/
 #ifdef FUZZING
-            (void)signalBandwidth;
-            (void)depth_threshold;
             if ((rand()&0x1) == 0)
 #else
-            if (codedBands<=start+2 || (band_bits > (depth_threshold*band_width<<LM<<BITRES)>>4 && j<=signalBandwidth))
+            if (codedBands<=start+2 || band_bits > ((j<prev?7:9)*band_width<<LM<<BITRES)>>4)
 #endif
             {
                ec_enc_bit_logp(ec, 1, 1);
@@ -421,7 +414,7 @@ static OPUS_INLINE int interp_bits2pulses(const CELTMode *m, int start, int end,
 
    /* Allocate the remaining bits */
    left = total-psum;
-   percoeff = celt_udiv(left, m->eBands[codedBands]-m->eBands[start]);
+   percoeff = left/(m->eBands[codedBands]-m->eBands[start]);
    left -= (m->eBands[codedBands]-m->eBands[start])*percoeff;
    for (j=start;j<codedBands;j++)
       bits[j] += ((int)percoeff*(m->eBands[j+1]-m->eBands[j]));
@@ -472,8 +465,7 @@ static OPUS_INLINE int interp_bits2pulses(const CELTMode *m, int start, int end,
             offset += NClogN>>3;
 
          /* Divide with rounding */
-         ebits[j] = IMAX(0, (bits[j] + offset + (den<<(BITRES-1))));
-         ebits[j] = celt_udiv(ebits[j], den)>>BITRES;
+         ebits[j] = IMAX(0, (bits[j] + offset + (den<<(BITRES-1))) / (den<<BITRES));
 
          /* Make sure not to bust */
          if (C*ebits[j] > (bits[j]>>BITRES))
@@ -531,8 +523,8 @@ static OPUS_INLINE int interp_bits2pulses(const CELTMode *m, int start, int end,
    return codedBands;
 }
 
-int clt_compute_allocation(const CELTMode *m, int start, int end, const int *offsets, const int *cap, int alloc_trim, int *intensity, int *dual_stereo,
-      opus_int32 total, opus_int32 *balance, int *pulses, int *ebits, int *fine_priority, int C, int LM, ec_ctx *ec, int encode, int prev, int signalBandwidth)
+int compute_allocation(const CELTMode *m, int start, int end, const int *offsets, const int *cap, int alloc_trim, int *intensity, int *dual_stereo,
+      opus_int32 total, opus_int32 *balance, int *pulses, int *ebits, int *fine_priority, int C, int LM, ec_ctx *ec, int encode, int prev)
 {
    int lo, hi, len, j;
    int codedBands;
@@ -639,7 +631,8 @@ int clt_compute_allocation(const CELTMode *m, int start, int end, const int *off
    }
    codedBands = interp_bits2pulses(m, start, end, skip_start, bits1, bits2, thresh, cap,
          total, balance, skip_rsv, intensity, intensity_rsv, dual_stereo, dual_stereo_rsv,
-         pulses, ebits, fine_priority, C, LM, ec, encode, prev, signalBandwidth);
+         pulses, ebits, fine_priority, C, LM, ec, encode, prev);
    RESTORE_STACK;
    return codedBands;
 }
+

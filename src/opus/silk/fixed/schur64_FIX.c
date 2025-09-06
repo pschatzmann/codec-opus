@@ -8,11 +8,11 @@ this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the
+- Neither the name of Internet Society, IETF or IETF Trust, nor the 
 names of specific contributors, may be used to endorse or promote
 products derived from this software without specific prior written
 permission.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
 ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
@@ -43,7 +43,7 @@ opus_int32 silk_schur64(                            /* O    returns residual ene
     opus_int32 C[ SILK_MAX_ORDER_LPC + 1 ][ 2 ];
     opus_int32 Ctmp1_Q30, Ctmp2_Q30, rc_tmp_Q31;
 
-    celt_assert( order >= 0 && order <= SILK_MAX_ORDER_LPC );
+    silk_assert( order==6||order==8||order==10||order==12||order==14||order==16 );
 
     /* Check for invalid input */
     if( c[ 0 ] <= 0 ) {
@@ -51,23 +51,11 @@ opus_int32 silk_schur64(                            /* O    returns residual ene
         return 0;
     }
 
-    k = 0;
-    do {
+    for( k = 0; k < order + 1; k++ ) {
         C[ k ][ 0 ] = C[ k ][ 1 ] = c[ k ];
-    } while( ++k <= order );
+    }
 
     for( k = 0; k < order; k++ ) {
-        /* Check that we won't be getting an unstable rc, otherwise stop here. */
-        if (silk_abs_int32(C[ k + 1 ][ 0 ]) >= C[ 0 ][ 1 ]) {
-           if ( C[ k + 1 ][ 0 ] > 0 ) {
-              rc_Q16[ k ] = -SILK_FIX_CONST( .99f, 16 );
-           } else {
-              rc_Q16[ k ] = SILK_FIX_CONST( .99f, 16 );
-           }
-           k++;
-           break;
-        }
-
         /* Get reflection coefficient: divide two Q30 values and get result in Q31 */
         rc_tmp_Q31 = silk_DIV32_varQ( -C[ k + 1 ][ 0 ], C[ 0 ][ 1 ], 31 );
 
@@ -85,9 +73,5 @@ opus_int32 silk_schur64(                            /* O    returns residual ene
         }
     }
 
-    for(; k < order; k++ ) {
-       rc_Q16[ k ] = 0;
-    }
-
-    return silk_max_32( 1, C[ 0 ][ 1 ] );
+    return( C[ 0 ][ 1 ] );
 }
