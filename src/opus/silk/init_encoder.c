@@ -36,6 +36,10 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "tuning_parameters.h"
 #include "opus/celt/cpu_support.h"
 
+#ifdef ENABLE_DRED
+#include "dred_encoder.h"
+#endif
+
 /*********************************/
 /* Initialize Silk Encoder state */
 /*********************************/
