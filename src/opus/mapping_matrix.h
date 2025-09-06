@@ -53,7 +53,7 @@ opus_int32 mapping_matrix_get_size(int rows, int cols);
 opus_int16 *mapping_matrix_get_data(const MappingMatrix *matrix);
 
 void mapping_matrix_init(
-    MappingMatrix * const matrix,
+    MappingMatrix * const st,
     int rows,
     int cols,
     int gain,
@@ -66,7 +66,7 @@ void mapping_matrix_multiply_channel_in_float(
     const MappingMatrix *matrix,
     const float *input,
     int input_rows,
-    opus_res *output,
+    opus_val16 *output,
     int output_row,
     int output_rows,
     int frame_size
@@ -74,7 +74,7 @@ void mapping_matrix_multiply_channel_in_float(
 
 void mapping_matrix_multiply_channel_out_float(
     const MappingMatrix *matrix,
-    const opus_res *input,
+    const opus_val16 *input,
     int input_row,
     int input_rows,
     float *output,
@@ -87,7 +87,7 @@ void mapping_matrix_multiply_channel_in_short(
     const MappingMatrix *matrix,
     const opus_int16 *input,
     int input_rows,
-    opus_res *output,
+    opus_val16 *output,
     int output_row,
     int output_rows,
     int frame_size
@@ -95,7 +95,7 @@ void mapping_matrix_multiply_channel_in_short(
 
 void mapping_matrix_multiply_channel_out_short(
     const MappingMatrix *matrix,
-    const opus_res *input,
+    const opus_val16 *input,
     int input_row,
     int input_rows,
     opus_int16 *output,
@@ -103,26 +103,6 @@ void mapping_matrix_multiply_channel_out_short(
     int frame_size
 );
 
-
-void mapping_matrix_multiply_channel_in_int24(
-    const MappingMatrix *matrix,
-    const opus_int32 *input,
-    int input_rows,
-    opus_res *output,
-    int output_row,
-    int output_rows,
-    int frame_size
-);
-
-void mapping_matrix_multiply_channel_out_int24(
-    const MappingMatrix *matrix,
-    const opus_res *input,
-    int input_row,
-    int input_rows,
-    opus_int32 *output,
-    int output_rows,
-    int frame_size
-);
 /* Pre-computed mixing and demixing matrices for 1st to 3rd-order ambisonics.
  *   foa: first-order ambisonics
  *   soa: second-order ambisonics
@@ -137,12 +117,6 @@ extern const opus_int16 mapping_matrix_soa_mixing_data[121];
 extern const MappingMatrix mapping_matrix_toa_mixing;
 extern const opus_int16 mapping_matrix_toa_mixing_data[324];
 
-extern const MappingMatrix mapping_matrix_fourthoa_mixing;
-extern const opus_int16 mapping_matrix_fourthoa_mixing_data[729];
-
-extern const MappingMatrix mapping_matrix_fifthoa_mixing;
-extern const opus_int16 mapping_matrix_fifthoa_mixing_data[1444];
-
 extern const MappingMatrix mapping_matrix_foa_demixing;
 extern const opus_int16 mapping_matrix_foa_demixing_data[36];
 
@@ -151,12 +125,6 @@ extern const opus_int16 mapping_matrix_soa_demixing_data[121];
 
 extern const MappingMatrix mapping_matrix_toa_demixing;
 extern const opus_int16 mapping_matrix_toa_demixing_data[324];
-
-extern const MappingMatrix mapping_matrix_fourthoa_demixing;
-extern const opus_int16 mapping_matrix_fourthoa_demixing_data[729];
-
-extern const MappingMatrix mapping_matrix_fifthoa_demixing;
-extern const opus_int16 mapping_matrix_fifthoa_demixing_data[1444];
 
 #ifdef __cplusplus
 }
