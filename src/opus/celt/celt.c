@@ -1,8 +1,11 @@
-/* Copyright (c) 2007-2008 CSIRO
-   Copyright (c) 2007-2010 Xiph.Org Foundation
-   Copyright (c) 2008 Gregory Maxwell
+/* Copyright (c) 2007-2012 IETF Trust, CSIRO, Xiph.Org Foundation,
+                           Gregory Maxwell. All rights reserved.
    Written by Jean-Marc Valin and Gregory Maxwell */
 /*
+
+   This file is extracted from RFC6716. Please see that RFC for additional
+   information.
+
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
@@ -14,11 +17,16 @@
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
 
+   - Neither the name of Internet Society, IETF or IETF Trust, nor the
+   names of specific contributors, may be used to endorse or promote
+   products derived from this software without specific prior written
+   permission.
+
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-   A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR
-   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+   OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
@@ -1552,7 +1560,7 @@ int celt_encode_with_ec(CELTEncoder * restrict st, const opus_val16 * pcm, int f
 #endif
       if (anti_collapse_on)
       {
-         anti_collapse(st->mode, X, collapse_masks, LM, C, CC, N,
+         anti_collapse(st->mode, X, collapse_masks, LM, C, N,
                st->start, st->end, oldBandE, oldLogE, oldLogE2, pulses, st->rng);
       }
 
@@ -2525,7 +2533,7 @@ int celt_decode_with_ec(CELTDecoder * restrict st, const unsigned char *data, in
          fine_quant, fine_priority, len*8-ec_tell(dec), dec, C);
 
    if (anti_collapse_on)
-      anti_collapse(st->mode, X, collapse_masks, LM, C, CC, N,
+      anti_collapse(st->mode, X, collapse_masks, LM, C, N,
             st->start, st->end, oldBandE, oldLogE, oldLogE2, pulses, st->rng);
 
    log2Amp(st->mode, st->start, st->end, bandE, oldBandE, C);
