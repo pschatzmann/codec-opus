@@ -126,10 +126,6 @@ static const opus_int32 mode_thresholds[2][2] = {
       {  48000,      24000}, /* stereo */
 };
 
-static const int celt_delay_table[5] = {
-/* API 8  12  16  24  48 */
-      10, 16, 21, 27, 55
-};
 int opus_encoder_get_size(int channels)
 {
     int silkEncSizeBytes, celtEncSizeBytes;
@@ -198,6 +194,8 @@ int opus_encoder_init(OpusEncoder* st, opus_int32 Fs, int channels, int applicat
     celt_encoder_ctl(celt_enc, OPUS_SET_COMPLEXITY(10));
 
     st->use_vbr = 1;
+    /* Makes constrained VBR the default (safer for real-time use) */
+    st->vbr_constraint = 1;
     st->user_bitrate_bps = OPUS_AUTO;
     st->bitrate_bps = 3000+Fs*channels;
     st->application = application;
@@ -209,11 +207,11 @@ int opus_encoder_init(OpusEncoder* st, opus_int32 Fs, int channels, int applicat
     st->voice_ratio = -1;
     st->encoder_buffer = st->Fs/100;
 
-    st->delay_compensation = st->Fs/400;
+    /* Delay compensation of 4 ms (2.5 ms for SILK's extra look-ahead 
+       + 1.5 ms for SILK resamplers and stereo prediction) */
+    st->delay_compensation = st->Fs/250;
 
-    st->delay_compensation += celt_delay_table[rateID(st->Fs)];
-
-    st->hybrid_stereo_width_Q14             = 1 << 14;
+    st->hybrid_stereo_width_Q14 = 1 << 14;
     st->variable_HP_smth2_Q15 = silk_LSHIFT( silk_lin2log( VARIABLE_HP_MIN_CUTOFF_HZ ), 8 );
     st->first = 1;
     st->mode = MODE_HYBRID;
@@ -483,6 +481,11 @@ int opus_encode_float(OpusEncoder *st, const opus_val16 *pcm, int frame_size,
        RESTORE_STACK;
        return OPUS_BAD_ARG;
     }
+    if (max_data_bytes<=0)
+    {
+       RESTORE_STACK;
+       return OPUS_BAD_ARG;
+    }
     silk_enc = (char*)st+st->silk_enc_offset;
     celt_enc = (CELTEncoder*)((char*)st+st->celt_enc_offset);
 
@@ -494,6 +497,22 @@ int opus_encode_float(OpusEncoder *st, const opus_val16 *pcm, int frame_size,
     st->bitrate_bps = user_bitrate_to_bitrate(st, frame_size, max_data_bytes);
 
     frame_rate = st->Fs/frame_size;
+    if (max_data_bytes<3 || st->bitrate_bps < 3*frame_rate*8
+       || (frame_rate<50 && (max_data_bytes*frame_rate<300 || st->bitrate_bps < 2400)))
+    {
+       int tocmode = st->mode;
+       if (tocmode==0)
+          tocmode = MODE_SILK_ONLY;
+       if (frame_rate>100)
+          tocmode = MODE_CELT_ONLY;
+       if (frame_rate < 50)
+          tocmode = MODE_SILK_ONLY;
+       data[0] = gen_toc(tocmode, frame_rate,
+                         st->bandwidth == 0 ? OPUS_BANDWIDTH_NARROWBAND : st->bandwidth,
+                         st->stream_channels);
+       RESTORE_STACK;
+       return 1;
+    }
     if (!st->use_vbr)
     {
        int cbrBytes;
@@ -685,7 +704,7 @@ int opus_encode_float(OpusEncoder *st, const opus_val16 *pcm, int frame_size,
         st->bandwidth = bandwidth;
         /* Prevents any transition to SWB/FB until the SILK layer has fully
            switched to WB mode and turned the variable LP filter off */
-        if (st->mode != MODE_CELT_ONLY && !st->silk_mode.inWBmodeWithoutVariableLP && st->bandwidth > OPUS_BANDWIDTH_WIDEBAND)
+        if (!st->first && st->mode != MODE_CELT_ONLY && !st->silk_mode.inWBmodeWithoutVariableLP && st->bandwidth > OPUS_BANDWIDTH_WIDEBAND)
             st->bandwidth = OPUS_BANDWIDTH_WIDEBAND;
     }
 
@@ -786,7 +805,7 @@ int opus_encode_float(OpusEncoder *st, const opus_val16 *pcm, int frame_size,
         st->mode = MODE_SILK_ONLY;
 
     /* printf("%d %d %d %d\n", st->bitrate_bps, st->stream_channels, st->mode, curr_bandwidth); */
-    bytes_target = IMIN(max_data_bytes-1, st->bitrate_bps * frame_size / (st->Fs * 8)) - 1;
+    bytes_target = IMIN(max_data_bytes, st->bitrate_bps * frame_size / (st->Fs * 8)) - 1;
 
     data += 1;
 
@@ -872,6 +891,7 @@ int opus_encode_float(OpusEncoder *st, const opus_val16 *pcm, int frame_size,
         if (st->mode == MODE_SILK_ONLY)
         {
            opus_int32 effective_max_rate = max_rate;
+           st->silk_mode.maxInternalSampleRate = 16000;
            if (frame_rate > 50)
               effective_max_rate = effective_max_rate*2/3;
            if (effective_max_rate < 13000)
@@ -932,6 +952,7 @@ int opus_encode_float(OpusEncoder *st, const opus_val16 *pcm, int frame_size,
         }
         if (nBytes==0)
         {
+           st->rangeFinal = 0;
            data[-1] = gen_toc(st->mode, st->Fs/frame_size, curr_bandwidth, st->stream_channels);
            RESTORE_STACK;
            return 1;
@@ -1087,14 +1108,6 @@ int opus_encode_float(OpusEncoder *st, const opus_val16 *pcm, int frame_size,
     {
         ret = (ec_tell(&enc)+7)>>3;
         ec_enc_done(&enc);
-        /*When in LPC only mode it's perfectly
-          reasonable to strip off trailing zero bytes as
-          the required range decoder behavior is to
-          fill these in. This can't be done when the MDCT
-          modes are used because the decoder needs to know
-          the actual length for allocation purposes.*/
-        if(!redundancy)
-            while(ret>2&&data[ret-1]==0)ret--;
         nb_compr_bytes = ret;
     } else {
        nb_compr_bytes = IMIN((max_data_bytes-1)-redundancy_bytes, nb_compr_bytes);
@@ -1129,7 +1142,7 @@ int opus_encode_float(OpusEncoder *st, const opus_val16 *pcm, int frame_size,
            celt_encoder_ctl(celt_enc, CELT_SET_PREDICTION(0));
         }
         /* If false, we already busted the budget and we'll end up with a "PLC packet" */
-        if (ec_tell(&enc) < 8*nb_compr_bytes)
+        if (ec_tell(&enc) <= 8*nb_compr_bytes)
         {
            ret = celt_encode_with_ec(celt_enc, pcm_buf, frame_size, NULL, nb_compr_bytes, &enc);
            if (ret < 0)
@@ -1183,6 +1196,15 @@ int opus_encode_float(OpusEncoder *st, const opus_val16 *pcm, int frame_size,
        data[1] = 0;
        ret = 1;
        st->rangeFinal = 0;
+    } else if (st->mode==MODE_SILK_ONLY&&!redundancy)
+    {
+       /*When in LPC only mode it's perfectly
+         reasonable to strip off trailing zero bytes as
+         the required range decoder behavior is to
+         fill these in. This can't be done when the MDCT
+         modes are used because the decoder needs to know
+         the actual length for allocation purposes.*/
+       while(ret>2&&data[ret]==0)ret--;
     }
     /* Count ToC and redundancy */
     ret += 1+redundancy_bytes;
@@ -1205,6 +1227,8 @@ int opus_encode_float(OpusEncoder *st, const float *pcm, int frame_size,
    int i, ret;
    VARDECL(opus_int16, in);
    ALLOC_STACK;
+
+   if(frame_size<0)return OPUS_BAD_ARG;
 
    ALLOC(in, frame_size*st->channels, opus_int16);
 
