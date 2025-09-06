@@ -246,6 +246,20 @@ static int opus_decode_frame(OpusDecoder *st, const unsigned char *data,
       }
    }
 
+   /* For CELT/hybrid PLC of more than 20 ms, do multiple calls */
+   if (data==NULL && frame_size > F20 && mode != MODE_SILK_ONLY)
+   {
+      int nb_samples = 0;
+      do {
+         int ret = opus_decode_frame(st, NULL, 0, pcm, F20, 0);
+         if (ret != F20)
+            return OPUS_INTERNAL_ERROR;
+         pcm += F20*st->channels;
+         nb_samples += F20;
+      } while (nb_samples < frame_size);
+      RESTORE_STACK;
+      return frame_size;
+   }
    ALLOC(pcm_transition, F5*st->channels, opus_val16);
 
    if (data!=NULL && st->prev_mode > 0 && (
@@ -413,7 +427,7 @@ static int opus_decode_frame(OpusDecoder *st, const unsigned char *data,
          pcm[i] = 0;
       /* For hybrid -> SILK transitions, we let the CELT MDCT
          do a fade-out by decoding a silence frame */
-      if (st->prev_mode == MODE_HYBRID)
+      if (st->prev_mode == MODE_HYBRID && !(redundancy && celt_to_silk && st->prev_redundancy) )
       {
          celt_decoder_ctl(celt_dec, CELT_SET_START_BAND(0));
          celt_decode_with_ec(celt_dec, silence, 2, pcm, F2_5, NULL);
@@ -753,6 +767,8 @@ int opus_decode(OpusDecoder *st, const unsigned char *data,
    int ret, i;
    ALLOC_STACK;
 
+   if(frame_size<0)return OPUS_BAD_ARG;
+
    ALLOC(out, frame_size*st->channels, float);
 
    ret = opus_decode_native(st, data, len, out, frame_size, decode_fec, 0, NULL);
@@ -907,6 +923,10 @@ int opus_decoder_get_nb_samples(const OpusDecoder *dec,
 {
    int samples;
    int count = opus_packet_get_nb_frames(packet, len);
+
+   if (count<0)
+      return count;
+
    samples = count*opus_packet_get_samples_per_frame(packet, dec->Fs);
    /* Can't have more than 120 ms */
    if (samples*25 > dec->Fs*3)
