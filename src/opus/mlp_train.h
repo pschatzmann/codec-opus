@@ -25,17 +25,62 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _MLP_H_
-#define _MLP_H_
+#ifndef _MLP_TRAIN_H_
+#define _MLP_TRAIN_H_
 
-#include "opus/celt/arch.h"
+#include <math.h>
+#include <stdlib.h>
+
+double tansig_table[501];
+static inline double tansig_double(double x) 
+{
+	return 2./(1.+exp(-2.*x)) - 1.;
+}
+static inline void build_tansig_table()
+{
+	int i;
+	for (i=0;i<501;i++)
+		tansig_table[i] = tansig_double(.04*(i-250));
+}
+
+static inline double tansig_approx(double x)
+{
+	int i;
+	double y, dy;
+	if (x>=10)
+		return 1;
+	if (x<=-10)
+		return -1;
+	i = lrint(25*x);
+	x -= .04*i;
+	y = tansig_table[250+i];
+	dy = 1-y*y;
+	y = y + x*dy*(1 - y*x);
+	return y;
+}
+
+inline float randn(float sd)
+{
+   float U1, U2, S, x;
+   do {
+      U1 = ((float)rand())/RAND_MAX;
+      U2 = ((float)rand())/RAND_MAX;
+      U1 = 2*U1-1;
+      U2 = 2*U2-1;
+      S = U1*U1 + U2*U2;
+   } while (S >= 1 || S == 0.0f);
+   x = sd*sqrt(-2 * log(S) / S) * U1;
+   return x;
+}
+
 
 typedef struct {
 	int layers;
-	const int *topo;
-	const float *weights;
-} MLP;
+	int *topo;
+	double **weights;
+	double **best_weights;
+	double *in_rate;
+} MLPTrain;
 
-void mlp_process(const MLP *m, const float *in, float *out);
 
-#endif /* _MLP_H_ */
+#endif /* _MLP_TRAIN_H_ */
