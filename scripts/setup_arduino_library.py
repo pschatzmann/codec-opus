@@ -168,6 +168,9 @@ def cleanup():
     files_to_delete = [
         os.path.join(project_root, 'src', 'opus', 'opus_demo.c'),
         os.path.join(project_root, 'src', 'opus', 'opus_compare.c'),
+        os.path.join(project_root, 'src', 'opus', 'test_opus_custom.c'),
+        os.path.join(project_root, 'src', 'opus', 'test_opus.c'),
+        os.path.join(project_root, 'src', 'opus', 'test_repacketizer.c'),
     ]
     for f in files_to_delete:
         if os.path.exists(f):
