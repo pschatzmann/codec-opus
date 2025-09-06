@@ -12,6 +12,11 @@
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
 
+   - Neither the name of Internet Society, IETF or IETF Trust, nor the
+   names of specific contributors, may be used to endorse or promote
+   products derived from this software without specific prior written
+   permission.
+
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -69,7 +74,7 @@ int main(int argc, char *argv[])
    if (argc < 3)
    {
       usage(argv[0]);
-      return EXIT_FAILURE;
+      return 1;
    }
    for (i=1;i<argc-2;i++)
    {
@@ -79,12 +84,7 @@ int main(int argc, char *argv[])
          if(merge<1)
          {
             fprintf(stderr, "-merge parameter must be at least 1.\n");
-            return EXIT_FAILURE;
-         }
-         if(merge>48)
-         {
-            fprintf(stderr, "-merge parameter must be less than 48.\n");
-            return EXIT_FAILURE;
+            return 1;
          }
          i++;
       } else if (strcmp(argv[i], "-split")==0)
@@ -93,21 +93,21 @@ int main(int argc, char *argv[])
       {
          fprintf(stderr, "Unknown option: %s\n", argv[i]);
          usage(argv[0]);
-         return EXIT_FAILURE;
+         return 1;
       }
    }
    fin = fopen(argv[argc-2], "r");
    if(fin==NULL)
    {
      fprintf(stderr, "Error opening input file: %s\n", argv[argc-2]);
-     return EXIT_FAILURE;
+     return 1;
    }
    fout = fopen(argv[argc-1], "w");
    if(fout==NULL)
    {
      fprintf(stderr, "Error opening output file: %s\n", argv[argc-1]);
      fclose(fin);
-     return EXIT_FAILURE;
+     return 1;
    }
 
    rp = opus_repacketizer_create();
@@ -119,19 +119,7 @@ int main(int argc, char *argv[])
       for (i=0;i<nb_packets;i++)
       {
          unsigned char ch[4];
-         if (fread(ch, 1, 4, fin)!=4)
-         {
-             if (feof(fin))
-             {
-                eof = 1;
-             } else {
-                fprintf(stderr, "Error reading payload length.\n");
-                fclose(fin);
-                fclose(fout);
-                return EXIT_FAILURE;
-             }
-             break;
-         }
+         err = fread(ch, 1, 4, fin);
          len[i] = char_to_int(ch);
          /*fprintf(stderr, "in len = %d\n", len[i]);*/
          if (len[i]>1500 || len[i]<0)
@@ -143,35 +131,17 @@ int main(int argc, char *argv[])
                 fprintf(stderr, "Invalid payload length\n");
                 fclose(fin);
                 fclose(fout);
-                return EXIT_FAILURE;
+                return 1;
              }
              break;
          }
-         if (fread(ch, 1, 4, fin)!=4)
-         {
-             if (feof(fin))
-             {
-                eof = 1;
-             } else {
-                fprintf(stderr, "Error reading.\n");
-                fclose(fin);
-                fclose(fout);
-                return EXIT_FAILURE;
-             }
-             break;
-         }
+         err = fread(ch, 1, 4, fin);
          rng[i] = char_to_int(ch);
-         if (fread(packets[i], len[i], 1, fin)!=1) {
-             if (feof(fin))
-             {
-                eof = 1;
-             } else {
-                fprintf(stderr, "Error reading packet of %u bytes.\n", len[i]);
-                fclose(fin);
-                fclose(fout);
-                return EXIT_FAILURE;
-             }
-             break;
+         err = fread(packets[i], 1, len[i], fin);
+         if (feof(fin))
+         {
+            eof = 1;
+            break;
          }
          err = opus_repacketizer_cat(rp, packets[i], len[i]);
          if (err!=OPUS_OK)
@@ -191,19 +161,10 @@ int main(int argc, char *argv[])
          if (err>0) {
             unsigned char int_field[4];
             int_to_char(err, int_field);
-            if(fwrite(int_field, 1, 4, fout)!=4){
-               fprintf(stderr, "Error writing.\n");
-               return EXIT_FAILURE;
-            }
+            fwrite(int_field, 1, 4, fout);
             int_to_char(rng[nb_packets-1], int_field);
-            if (fwrite(int_field, 1, 4, fout)!=4) {
-               fprintf(stderr, "Error writing.\n");
-               return EXIT_FAILURE;
-            }
-            if (fwrite(output_packet, 1, err, fout)!=(unsigned)err) {
-               fprintf(stderr, "Error writing.\n");
-               return EXIT_FAILURE;
-            }
+            fwrite(int_field, 1, 4, fout);
+            fwrite(output_packet, 1, err, fout);
             /*fprintf(stderr, "out len = %d\n", err);*/
          } else {
             fprintf(stderr, "opus_repacketizer_out() failed: %s\n", opus_strerror(err));
@@ -216,22 +177,13 @@ int main(int argc, char *argv[])
             if (err>0) {
                unsigned char int_field[4];
                int_to_char(err, int_field);
-               if (fwrite(int_field, 1, 4, fout)!=4) {
-                  fprintf(stderr, "Error writing.\n");
-                  return EXIT_FAILURE;
-               }
+               fwrite(int_field, 1, 4, fout);
                if (i==nb_frames-1)
                   int_to_char(rng[nb_packets-1], int_field);
                else
                   int_to_char(0, int_field);
-               if (fwrite(int_field, 1, 4, fout)!=4) {
-                  fprintf(stderr, "Error writing.\n");
-                  return EXIT_FAILURE;
-               }
-               if (fwrite(output_packet, 1, err, fout)!=(unsigned)err) {
-                  fprintf(stderr, "Error writing.\n");
-                  return EXIT_FAILURE;
-               }
+               fwrite(int_field, 1, 4, fout);
+               fwrite(output_packet, 1, err, fout);
                /*fprintf(stderr, "out len = %d\n", err);*/
             } else {
                fprintf(stderr, "opus_repacketizer_out() failed: %s\n", opus_strerror(err));
@@ -239,9 +191,10 @@ int main(int argc, char *argv[])
 
          }
       }
+
    }
 
    fclose(fin);
    fclose(fout);
-   return EXIT_SUCCESS;
+   return 0;
 }

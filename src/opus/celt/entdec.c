@@ -12,6 +12,11 @@
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
 
+   - Neither the name of Internet Society, IETF or IETF Trust, nor the
+   names of specific contributors, may be used to endorse or promote
+   products derived from this software without specific prior written
+   permission.
+
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -85,7 +90,7 @@
    number=3,
    pages="256--294",
    month=Jul,
-   URL="http://www.stanford.edu/class/ee398a/handouts/papers/Moffat98ArithmCoding.pdf"
+   URL="http://www.stanford.edu/class/ee398/handouts/papers/Moffat98ArithmCoding.pdf"
   }*/
 
 static int ec_read_byte(ec_dec *_this){
@@ -138,7 +143,7 @@ void ec_dec_init(ec_dec *_this,unsigned char *_buf,opus_uint32 _storage){
 
 unsigned ec_decode(ec_dec *_this,unsigned _ft){
   unsigned s;
-  _this->ext=celt_udiv(_this->rng,_ft);
+  _this->ext=_this->rng/_ft;
   s=(unsigned)(_this->val/_this->ext);
   return _ft-EC_MINI(s+1,_ft);
 }
@@ -175,27 +180,6 @@ int ec_dec_bit_logp(ec_dec *_this,unsigned _logp){
 }
 
 int ec_dec_icdf(ec_dec *_this,const unsigned char *_icdf,unsigned _ftb){
-  opus_uint32 r;
-  opus_uint32 d;
-  opus_uint32 s;
-  opus_uint32 t;
-  int         ret;
-  s=_this->rng;
-  d=_this->val;
-  r=s>>_ftb;
-  ret=-1;
-  do{
-    t=s;
-    s=IMUL32(r,_icdf[++ret]);
-  }
-  while(d<s);
-  _this->val=d-s;
-  _this->rng=t-s;
-  ec_dec_normalize(_this);
-  return ret;
-}
-
-int ec_dec_icdf16(ec_dec *_this,const opus_uint16 *_icdf,unsigned _ftb){
   opus_uint32 r;
   opus_uint32 d;
   opus_uint32 s;

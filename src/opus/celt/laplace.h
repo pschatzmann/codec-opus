@@ -13,6 +13,11 @@
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
 
+   - Neither the name of Internet Society, IETF or IETF Trust, nor the
+   names of specific contributors, may be used to endorse or promote
+   products derived from this software without specific prior written
+   permission.
+
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -25,9 +30,6 @@
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-
-#ifndef LAPLACE_H
-#define LAPLACE_H
 
 #include "entenc.h"
 #include "entdec.h"
@@ -49,9 +51,3 @@ void ec_laplace_encode(ec_enc *enc, int *value, unsigned fs, int decay);
  @return Value decoded
  */
 int ec_laplace_decode(ec_dec *dec, unsigned fs, int decay);
-
-
-int ec_laplace_decode_p0(ec_dec *dec, opus_uint16 p0, opus_uint16 decay);
-void ec_laplace_encode_p0(ec_enc *enc, int value, opus_uint16 p0, opus_uint16 decay);
-
-#endif

@@ -12,6 +12,11 @@
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
 
+   - Neither the name of Internet Society, IETF or IETF Trust, nor the
+   names of specific contributors, may be used to endorse or promote
+   products derived from this software without specific prior written
+   permission.
+
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -26,19 +31,12 @@
 */
 
 #include "opus/opus_types.h"
-#include "opus/opus_defines.h"
 
 #if !defined(_entcode_H)
 # define _entcode_H (1)
 # include <limits.h>
 # include <stddef.h>
 # include "ecintrin.h"
-
-extern const opus_uint32 SMALL_DIV_TABLE[129];
-
-#ifdef OPUS_ARM_ASM
-#define USE_SMALL_DIV_TABLE
-#endif
 
 /*OPT: ec_window must be at least 32 bits, but if you have fast arithmetic on a
    larger type, you can speed up the decoder by using it here.*/
@@ -82,7 +80,7 @@ struct ec_ctx{
      In the encoder: the low end of the current range.*/
    opus_uint32    val;
    /*In the decoder: the saved normalization factor from ec_decode().
-     In the encoder: the number of outstanding carry propagating symbols.*/
+     In the encoder: the number of oustanding carry propagating symbols.*/
    opus_uint32    ext;
    /*A buffered input/output symbol, awaiting carry propagation.*/
    int            rem;
@@ -90,15 +88,15 @@ struct ec_ctx{
    int            error;
 };
 
-static OPUS_INLINE opus_uint32 ec_range_bytes(ec_ctx *_this){
+static inline opus_uint32 ec_range_bytes(ec_ctx *_this){
   return _this->offs;
 }
 
-static OPUS_INLINE unsigned char *ec_get_buffer(ec_ctx *_this){
+static inline unsigned char *ec_get_buffer(ec_ctx *_this){
   return _this->buf;
 }
 
-static OPUS_INLINE int ec_get_error(ec_ctx *_this){
+static inline int ec_get_error(ec_ctx *_this){
   return _this->error;
 }
 
@@ -108,7 +106,7 @@ static OPUS_INLINE int ec_get_error(ec_ctx *_this){
   Return: The number of bits.
           This will always be slightly larger than the exact value (e.g., all
            rounding error is in the positive direction).*/
-static OPUS_INLINE int ec_tell(ec_ctx *_this){
+static inline int ec_tell(ec_ctx *_this){
   return _this->nbits_total-EC_ILOG(_this->rng);
 }
 
@@ -119,34 +117,5 @@ static OPUS_INLINE int ec_tell(ec_ctx *_this){
           This will always be slightly larger than the exact value (e.g., all
            rounding error is in the positive direction).*/
 opus_uint32 ec_tell_frac(ec_ctx *_this);
-
-/* Tested exhaustively for all n and for 1<=d<=256 */
-static OPUS_INLINE opus_uint32 celt_udiv(opus_uint32 n, opus_uint32 d) {
-   celt_sig_assert(d>0);
-#ifdef USE_SMALL_DIV_TABLE
-   if (d>256)
-      return n/d;
-   else {
-      opus_uint32 t, q;
-      t = EC_ILOG(d&-d);
-      q = (opus_uint64)SMALL_DIV_TABLE[d>>t]*(n>>(t-1))>>32;
-      return q+(n-q*d >= d);
-   }
-#else
-   return n/d;
-#endif
-}
-
-static OPUS_INLINE opus_int32 celt_sudiv(opus_int32 n, opus_int32 d) {
-   celt_sig_assert(d>0);
-#ifdef USE_SMALL_DIV_TABLE
-   if (n<0)
-      return -(opus_int32)celt_udiv(-n, d);
-   else
-      return celt_udiv(n, d);
-#else
-   return n/d;
-#endif
-}
 
 #endif
