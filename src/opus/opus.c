@@ -12,11 +12,16 @@
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
 
+   - Neither the name of Internet Society, IETF or IETF Trust, nor the
+   names of specific contributors, may be used to endorse or promote
+   products derived from this software without specific prior written
+   permission.
+
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-   A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR
-   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
+   OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
@@ -30,34 +35,18 @@
 #endif
 
 #include "opus.h"
+#include "opus_private.h"
 
-#ifndef OPUS_VERSION
-#define OPUS_VERSION "unknown"
-#endif
-
-const char *opus_strerror(int error)
+int encode_size(int size, unsigned char *data)
 {
-   static const char *error_strings[8] = {
-      "success",
-      "invalid argument",
-      "buffer too small",
-      "internal error",
-      "corrupted stream",
-      "request not implemented",
-      "invalid state",
-      "memory allocation failed"
-   };
-   if (error > 0 || error < -7)
-      return "unknown error";
-   else
-      return error_strings[-error];
+   if (size < 252)
+   {
+      data[0] = size;
+      return 1;
+   } else {
+      data[0] = 252+(size&0x3);
+      data[1] = (size-(int)data[0])>>2;
+      return 2;
+   }
 }
 
-const char *opus_get_version_string(void)
-{
-	return "libopus " OPUS_VERSION
-#ifdef FUZZING
-	      "-fuzzing"
-#endif
-	      ;
-}
