@@ -1,28 +1,28 @@
 /***********************************************************************
 Copyright (c) 2006-2011, Skype Limited. All rights reserved.
 Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions
-are met:
+modification, (subject to the limitations in the disclaimer below)
+are permitted provided that the following conditions are met:
 - Redistributions of source code must retain the above copyright notice,
 this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the 
-names of specific contributors, may be used to endorse or promote
-products derived from this software without specific prior written
-permission.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGE.
+- Neither the name of Skype Limited, nor the names of specific
+contributors, may be used to endorse or promote products derived from
+this software without specific prior written permission.
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+CONTRIBUTORS ''AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***********************************************************************/
 
 #if defined(HAVE_CONFIG_H) || defined(ARDUINO)
@@ -37,6 +37,13 @@ POSSIBILITY OF SUCH DAMAGE.
 #endif
 #include "tuning_parameters.h"
 #include "pitch_est_defines.h"
+
+static const opus_int enc_delay_matrix[3][5] = {
+/*SILK API 8  12  16  24  48 */
+/* 8 */   {5,  0,  3,  4,  8},
+/*12 */   {0,  6,  0,  0,  0},
+/*16 */   {4,  5, 11,  5, 18}
+};
 
 opus_int silk_setup_resamplers(
     silk_encoder_state_Fxx          *psEnc,             /* I/O                      */
@@ -143,7 +150,7 @@ opus_int silk_setup_resamplers(
     {
         if( psEnc->sCmn.fs_kHz == 0 ) {
             /* Initialize the resampler for enc_API.c preparing resampling from API_fs_Hz to fs_kHz */
-            ret += silk_resampler_init( &psEnc->sCmn.resampler_state, psEnc->sCmn.API_fs_Hz, fs_kHz * 1000, 1 );
+            ret += silk_resampler_init( &psEnc->sCmn.resampler_state, psEnc->sCmn.API_fs_Hz, fs_kHz * 1000 );
         } else {
             /* Allocate worst case space for temporary upsampling, 8 to 48 kHz, so a factor 6 */
             opus_int16 x_buf_API_fs_Hz[ ( 2 * MAX_FRAME_LENGTH_MS + LA_SHAPE_MS ) * MAX_API_FS_KHZ ];
@@ -161,7 +168,7 @@ opus_int silk_setup_resamplers(
 #endif
 
             /* Initialize resampler for temporary resampling of x_buf data to API_fs_Hz */
-            ret += silk_resampler_init( &temp_resampler_state, silk_SMULBB( psEnc->sCmn.fs_kHz, 1000 ), psEnc->sCmn.API_fs_Hz, 0 );
+            ret += silk_resampler_init( &temp_resampler_state, silk_SMULBB( psEnc->sCmn.fs_kHz, 1000 ), psEnc->sCmn.API_fs_Hz );
 
             /* Temporary resampling of x_buf data to API_fs_Hz */
             ret += silk_resampler( &temp_resampler_state, x_buf_API_fs_Hz, x_bufFIX, nSamples_temp );
@@ -170,7 +177,7 @@ opus_int silk_setup_resamplers(
             nSamples_temp = silk_DIV32_16( nSamples_temp * psEnc->sCmn.API_fs_Hz, silk_SMULBB( psEnc->sCmn.fs_kHz, 1000 ) );
 
             /* Initialize the resampler for enc_API.c preparing resampling from API_fs_Hz to fs_kHz */
-            ret += silk_resampler_init( &psEnc->sCmn.resampler_state, psEnc->sCmn.API_fs_Hz, silk_SMULBB( fs_kHz, 1000 ), 1 );
+            ret += silk_resampler_init( &psEnc->sCmn.resampler_state, psEnc->sCmn.API_fs_Hz, silk_SMULBB( fs_kHz, 1000 ) );
 
             /* Correct resampler state by resampling buffered data from API_fs_Hz to fs_kHz */
             ret += silk_resampler( &psEnc->sCmn.resampler_state, x_bufFIX, x_buf_API_fs_Hz, nSamples_temp );
@@ -227,6 +234,9 @@ opus_int silk_setup_fs(
         psEnc->sCmn.TargetRate_bps = 0;         /* trigger new SNR computation */
     }
 
+    psEnc->sCmn.delay = enc_delay_matrix[rateID(fs_kHz*1000)][rateID(psEnc->sCmn.API_fs_Hz)];
+    silk_assert(psEnc->sCmn.delay <= MAX_ENCODER_DELAY);
+
     /* Set internal sampling frequency */
     silk_assert( fs_kHz == 8 || fs_kHz == 12 || fs_kHz == 16 );
     silk_assert( psEnc->sCmn.nb_subfr == 2 || psEnc->sCmn.nb_subfr == 4 );
@@ -247,7 +257,7 @@ opus_int silk_setup_fs(
         psEnc->sPrefilt.lagPrev                 = 100;
         psEnc->sShape.LastGainIndex             = 10;
         psEnc->sCmn.sNSQ.lagPrev                = 100;
-        psEnc->sCmn.sNSQ.prev_gain_Q16          = 65536;
+        psEnc->sCmn.sNSQ.prev_inv_gain_Q16      = 65536;
         psEnc->sCmn.prevSignalType              = TYPE_NO_VOICE_ACTIVITY;
 
         psEnc->sCmn.fs_kHz = fs_kHz;
@@ -326,7 +336,7 @@ opus_int silk_setup_complexity(
         psEncC->shapingLPCOrder                 = 10;
         psEncC->la_shape                        = 5 * psEncC->fs_kHz;
         psEncC->nStatesDelayedDecision          = 1;
-        psEncC->useInterpolatedNLSFs            = 0;
+        psEncC->useInterpolatedNLSFs            = 1;
         psEncC->LTPQuantLowComplexity           = 0;
         psEncC->NLSF_MSVQ_Survivors             = 4;
         psEncC->warping_Q16                     = 0;
@@ -337,7 +347,7 @@ opus_int silk_setup_complexity(
         psEncC->shapingLPCOrder                 = 12;
         psEncC->la_shape                        = 5 * psEncC->fs_kHz;
         psEncC->nStatesDelayedDecision          = 2;
-        psEncC->useInterpolatedNLSFs            = 1;
+        psEncC->useInterpolatedNLSFs            = 0;
         psEncC->LTPQuantLowComplexity           = 0;
         psEncC->NLSF_MSVQ_Survivors             = 8;
         psEncC->warping_Q16                     = psEncC->fs_kHz * SILK_FIX_CONST( WARPING_MULTIPLIER, 16 );
@@ -348,7 +358,7 @@ opus_int silk_setup_complexity(
         psEncC->shapingLPCOrder                 = 14;
         psEncC->la_shape                        = 5 * psEncC->fs_kHz;
         psEncC->nStatesDelayedDecision          = 3;
-        psEncC->useInterpolatedNLSFs            = 1;
+        psEncC->useInterpolatedNLSFs            = 0;
         psEncC->LTPQuantLowComplexity           = 0;
         psEncC->NLSF_MSVQ_Survivors             = 16;
         psEncC->warping_Q16                     = psEncC->fs_kHz * SILK_FIX_CONST( WARPING_MULTIPLIER, 16 );

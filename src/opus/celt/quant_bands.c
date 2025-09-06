@@ -13,16 +13,11 @@
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
 
-   - Neither the name of Internet Society, IETF or IETF Trust, nor the
-   names of specific contributors, may be used to endorse or promote
-   products derived from this software without specific prior written
-   permission.
-
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
-   OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+   A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR
+   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
@@ -162,8 +157,9 @@ static int quant_coarse_energy_impl(const CELTMode *m, int start, int end,
       const opus_val16 *eBands, opus_val16 *oldEBands,
       opus_int32 budget, opus_int32 tell,
       const unsigned char *prob_model, opus_val16 *error, ec_enc *enc,
-      int C, int LM, int intra, opus_val16 max_decay)
+      int _C, int LM, int intra, opus_val16 max_decay)
 {
+   const int C = CHANNELS(_C);
    int i, c;
    int badness = 0;
    opus_val32 prev[2] = {0,0};
@@ -263,9 +259,10 @@ static int quant_coarse_energy_impl(const CELTMode *m, int start, int end,
 
 void quant_coarse_energy(const CELTMode *m, int start, int end, int effEnd,
       const opus_val16 *eBands, opus_val16 *oldEBands, opus_uint32 budget,
-      opus_val16 *error, ec_enc *enc, int C, int LM, int nbAvailableBytes,
+      opus_val16 *error, ec_enc *enc, int _C, int LM, int nbAvailableBytes,
       int force_intra, opus_val32 *delayedIntra, int two_pass, int loss_rate)
 {
+   const int C = CHANNELS(_C);
    int intra;
    opus_val16 max_decay;
    VARDECL(opus_val16, oldEBands_intra);
@@ -355,9 +352,10 @@ void quant_coarse_energy(const CELTMode *m, int start, int end, int effEnd,
    RESTORE_STACK;
 }
 
-void quant_fine_energy(const CELTMode *m, int start, int end, opus_val16 *oldEBands, opus_val16 *error, int *fine_quant, ec_enc *enc, int C)
+void quant_fine_energy(const CELTMode *m, int start, int end, opus_val16 *oldEBands, opus_val16 *error, int *fine_quant, ec_enc *enc, int _C)
 {
    int i, c;
+   const int C = CHANNELS(_C);
 
    /* Encode finer resolution */
    for (i=start;i<end;i++)
@@ -392,9 +390,10 @@ void quant_fine_energy(const CELTMode *m, int start, int end, opus_val16 *oldEBa
    }
 }
 
-void quant_energy_finalise(const CELTMode *m, int start, int end, opus_val16 *oldEBands, opus_val16 *error, int *fine_quant, int *fine_priority, int bits_left, ec_enc *enc, int C)
+void quant_energy_finalise(const CELTMode *m, int start, int end, opus_val16 *oldEBands, opus_val16 *error, int *fine_quant, int *fine_priority, int bits_left, ec_enc *enc, int _C)
 {
    int i, prio, c;
+   const int C = CHANNELS(_C);
 
    /* Use up the remaining bits */
    for (prio=0;prio<2;prio++)
@@ -421,13 +420,14 @@ void quant_energy_finalise(const CELTMode *m, int start, int end, opus_val16 *ol
    }
 }
 
-void unquant_coarse_energy(const CELTMode *m, int start, int end, opus_val16 *oldEBands, int intra, ec_dec *dec, int C, int LM)
+void unquant_coarse_energy(const CELTMode *m, int start, int end, opus_val16 *oldEBands, int intra, ec_dec *dec, int _C, int LM)
 {
    const unsigned char *prob_model = e_prob_model[LM][intra];
    int i, c;
    opus_val32 prev[2] = {0, 0};
    opus_val16 coef;
    opus_val16 beta;
+   const int C = CHANNELS(_C);
    opus_int32 budget;
    opus_int32 tell;
 
@@ -486,9 +486,10 @@ void unquant_coarse_energy(const CELTMode *m, int start, int end, opus_val16 *ol
    }
 }
 
-void unquant_fine_energy(const CELTMode *m, int start, int end, opus_val16 *oldEBands, int *fine_quant, ec_dec *dec, int C)
+void unquant_fine_energy(const CELTMode *m, int start, int end, opus_val16 *oldEBands, int *fine_quant, ec_dec *dec, int _C)
 {
    int i, c;
+   const int C = CHANNELS(_C);
    /* Decode finer resolution */
    for (i=start;i<end;i++)
    {
@@ -509,9 +510,10 @@ void unquant_fine_energy(const CELTMode *m, int start, int end, opus_val16 *oldE
    }
 }
 
-void unquant_energy_finalise(const CELTMode *m, int start, int end, opus_val16 *oldEBands, int *fine_quant,  int *fine_priority, int bits_left, ec_dec *dec, int C)
+void unquant_energy_finalise(const CELTMode *m, int start, int end, opus_val16 *oldEBands, int *fine_quant,  int *fine_priority, int bits_left, ec_dec *dec, int _C)
 {
    int i, prio, c;
+   const int C = CHANNELS(_C);
 
    /* Use up the remaining bits */
    for (prio=0;prio<2;prio++)
@@ -538,9 +540,10 @@ void unquant_energy_finalise(const CELTMode *m, int start, int end, opus_val16 *
 }
 
 void log2Amp(const CELTMode *m, int start, int end,
-      celt_ener *eBands, const opus_val16 *oldEBands, int C)
+      celt_ener *eBands, const opus_val16 *oldEBands, int _C)
 {
    int c, i;
+   const int C = CHANNELS(_C);
    c=0;
    do {
       for (i=0;i<start;i++)
@@ -557,9 +560,10 @@ void log2Amp(const CELTMode *m, int start, int end,
 }
 
 void amp2Log2(const CELTMode *m, int effEnd, int end,
-      celt_ener *bandE, opus_val16 *bandLogE, int C)
+      celt_ener *bandE, opus_val16 *bandLogE, int _C)
 {
    int c, i;
+   const int C = CHANNELS(_C);
    c=0;
    do {
       for (i=0;i<effEnd;i++)

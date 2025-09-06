@@ -18,16 +18,11 @@
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
 
-   - Neither the name of Internet Society, IETF or IETF Trust, nor the
-   names of specific contributors, may be used to endorse or promote
-   products derived from this software without specific prior written
-   permission.
-
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
-   OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+   A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR
+   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
@@ -103,12 +98,13 @@ static void find_best_pitch(opus_val32 *xcorr, opus_val16 *y, int len,
 }
 
 void pitch_downsample(celt_sig * restrict x[], opus_val16 * restrict x_lp,
-      int len, int C)
+      int len, int _C)
 {
    int i;
    opus_val32 ac[5];
    opus_val16 tmp=Q15ONE;
    opus_val16 lpc[4], mem[4]={0,0,0,0};
+   const int C = CHANNELS(_C);
    for (i=1;i<len>>1;i++)
       x_lp[i] = SHR32(HALF32(HALF32(x[0][(2*i-1)]+x[0][(2*i+1)])+x[0][2*i]), SIG_SHIFT+3);
    x_lp[0] = SHR32(HALF32(HALF32(x[0][1])+x[0][0]), SIG_SHIFT+3);
@@ -263,7 +259,7 @@ void pitch_search(const opus_val16 * restrict x_lp, opus_val16 * restrict y,
 
 static const int second_check[16] = {0, 0, 3, 2, 3, 2, 5, 2, 3, 2, 3, 2, 5, 2, 3, 2};
 opus_val16 remove_doubling(opus_val16 *x, int maxperiod, int minperiod,
-      int N, int *T0_, int prev_period, opus_val16 prev_gain)
+      int N, int *_T0, int prev_period, opus_val16 prev_gain)
 {
    int k, i, T, T0;
    opus_val16 g, g0;
@@ -277,14 +273,14 @@ opus_val16 remove_doubling(opus_val16 *x, int maxperiod, int minperiod,
    minperiod0 = minperiod;
    maxperiod /= 2;
    minperiod /= 2;
-   *T0_ /= 2;
+   *_T0 /= 2;
    prev_period /= 2;
    N /= 2;
    x += maxperiod;
-   if (*T0_>=maxperiod)
-      *T0_=maxperiod-1;
+   if (*_T0>=maxperiod)
+      *_T0=maxperiod-1;
 
-   T = T0 = *T0_;
+   T = T0 = *_T0;
    xx=xy=yy=0;
    for (i=0;i<N;i++)
    {
@@ -382,9 +378,9 @@ opus_val16 remove_doubling(opus_val16 *x, int maxperiod, int minperiod,
       offset = 0;
    if (pg > g)
       pg = g;
-   *T0_ = 2*T+offset;
+   *_T0 = 2*T+offset;
 
-   if (*T0_<minperiod0)
-      *T0_=minperiod0;
+   if (*_T0<minperiod0)
+      *_T0=minperiod0;
    return pg;
 }

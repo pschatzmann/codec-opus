@@ -1,28 +1,28 @@
 /***********************************************************************
 Copyright (c) 2006-2011, Skype Limited. All rights reserved.
 Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions
-are met:
+modification, (subject to the limitations in the disclaimer below)
+are permitted provided that the following conditions are met:
 - Redistributions of source code must retain the above copyright notice,
 this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the 
-names of specific contributors, may be used to endorse or promote
-products derived from this software without specific prior written
-permission.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGE.
+- Neither the name of Skype Limited, nor the names of specific
+contributors, may be used to endorse or promote products derived from
+this software without specific prior written permission.
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+CONTRIBUTORS ''AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***********************************************************************/
 
 #if defined(HAVE_CONFIG_H) || defined(ARDUINO)
@@ -32,10 +32,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "main_FIX.h"
 #include "opus/silk/tuning_parameters.h"
 
-/* Compute gain to make warped filter coefficients have a zero mean log frequency response on a   */
-/* non-warped frequency scale. (So that it can be implemented with a minimum-phase monic filter.) */
-/* Note: A monic filter is one with the first coefficient equal to 1.0. In Silk we omit the first */
-/* coefficient in an array of coefficients, for monic filters.                                    */
+/* Compute gain to make warped filter coefficients have a zero mean log frequency response on a     */
+/* non-warped frequency scale. (So that it can be implemented with a minimum-phase monic filter.)   */
 static inline opus_int32 warped_gain( /* gain in Q16*/
     const opus_int32     *coefs_Q24,
     opus_int             lambda_Q16,
@@ -168,12 +166,12 @@ void silk_noise_shape_analysis_FIX(
     SNR_adj_dB_Q7 = psEnc->sCmn.SNR_dB_Q7;
 
     /* Input quality is the average of the quality in the lowest two VAD bands */
-    psEncCtrl->input_quality_Q14 = ( opus_int )silk_RSHIFT( (opus_int32)psEnc->sCmn.input_quality_bands_Q15[ 0 ]
+    psEncCtrl->input_quality_Q14 = ( opus_int )silk_RSHIFT( ( opus_int32 )psEnc->sCmn.input_quality_bands_Q15[ 0 ]
         + psEnc->sCmn.input_quality_bands_Q15[ 1 ], 2 );
 
     /* Coding quality level, between 0.0_Q0 and 1.0_Q0, but in Q14 */
     psEncCtrl->coding_quality_Q14 = silk_RSHIFT( silk_sigm_Q15( silk_RSHIFT_ROUND( SNR_adj_dB_Q7 -
-        SILK_FIX_CONST( 20.0, 7 ), 4 ) ), 1 );
+        SILK_FIX_CONST( 18.0, 7 ), 4 ) ), 1 );
 
     /* Reduce coding SNR during low speech activity */
     if( psEnc->sCmn.useCBR == 0 ) {
@@ -328,8 +326,8 @@ void silk_noise_shape_analysis_FIX(
         silk_bwexpander_32( AR1_Q24, psEnc->sCmn.shapingLPCOrder, BWExp1_Q16 );
 
         /* Ratio of prediction gains, in energy domain */
-        pre_nrg_Q30 = silk_LPC_inverse_pred_gain_Q24( AR2_Q24, psEnc->sCmn.shapingLPCOrder );
-        nrg         = silk_LPC_inverse_pred_gain_Q24( AR1_Q24, psEnc->sCmn.shapingLPCOrder );
+        silk_LPC_inverse_pred_gain_Q24( &pre_nrg_Q30, AR2_Q24, psEnc->sCmn.shapingLPCOrder );
+        silk_LPC_inverse_pred_gain_Q24( &nrg,         AR1_Q24, psEnc->sCmn.shapingLPCOrder );
 
         /*psEncCtrl->GainsPre[ k ] = 1.0f - 0.7f * ( 1.0f - pre_nrg / nrg ) = 0.3f + 0.7f * pre_nrg / nrg;*/
         pre_nrg_Q30 = silk_LSHIFT32( silk_SMULWB( pre_nrg_Q30, SILK_FIX_CONST( 0.7, 15 ) ), 1 );

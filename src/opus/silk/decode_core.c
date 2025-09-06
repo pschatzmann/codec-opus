@@ -1,28 +1,28 @@
 /***********************************************************************
 Copyright (c) 2006-2011, Skype Limited. All rights reserved.
 Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions
-are met:
+modification, (subject to the limitations in the disclaimer below)
+are permitted provided that the following conditions are met:
 - Redistributions of source code must retain the above copyright notice,
 this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the 
-names of specific contributors, may be used to endorse or promote
-products derived from this software without specific prior written
-permission.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGE.
+- Neither the name of Skype Limited, nor the names of specific
+contributors, may be used to endorse or promote products derived from
+this software without specific prior written permission.
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+CONTRIBUTORS ''AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***********************************************************************/
 
 #if defined(HAVE_CONFIG_H) || defined(ARDUINO)
@@ -41,16 +41,16 @@ void silk_decode_core(
     const opus_int              pulses[ MAX_FRAME_LENGTH ]      /* I    Pulse signal                                */
 )
 {
-    opus_int   i, k, lag = 0, start_idx, sLTP_buf_idx, NLSF_interpolation_flag, signalType;
+    opus_int   i, j, k, lag = 0, start_idx, sLTP_buf_idx, NLSF_interpolation_flag, signalType;
     opus_int16 *A_Q12, *B_Q14, *pxq, A_Q12_tmp[ MAX_LPC_ORDER ];
     opus_int16 sLTP[ MAX_FRAME_LENGTH ];
-    opus_int32 sLTP_Q15[ 2 * MAX_FRAME_LENGTH ];
-    opus_int32 LTP_pred_Q13, LPC_pred_Q10, Gain_Q10, inv_gain_Q31, gain_adj_Q16, rand_seed, offset_Q10;
-    opus_int32 *pred_lag_ptr, *pexc_Q14, *pres_Q14;
-    opus_int32 res_Q14[ MAX_SUB_FRAME_LENGTH ];
+    opus_int32 sLTP_Q16[ 2 * MAX_FRAME_LENGTH ];
+    opus_int32 LTP_pred_Q14, LPC_pred_Q10, Gain_Q10, inv_gain_Q16, inv_gain_Q32, gain_adj_Q16, rand_seed, offset_Q10;
+    opus_int32 *pred_lag_ptr, *pexc_Q10, *pres_Q10;
+    opus_int32 res_Q10[ MAX_SUB_FRAME_LENGTH ];
     opus_int32 sLPC_Q14[ MAX_SUB_FRAME_LENGTH + MAX_LPC_ORDER ];
 
-    silk_assert( psDec->prev_gain_Q16 != 0 );
+    silk_assert( psDec->prev_inv_gain_Q16 != 0 );
 
     offset_Q10 = silk_Quantization_Offsets_Q10[ psDec->indices.signalType >> 1 ][ psDec->indices.quantOffsetType ];
 
@@ -64,30 +64,28 @@ void silk_decode_core(
     rand_seed = psDec->indices.Seed;
     for( i = 0; i < psDec->frame_length; i++ ) {
         rand_seed = silk_RAND( rand_seed );
-        psDec->exc_Q14[ i ] = silk_LSHIFT( (opus_int32)pulses[ i ], 14 );
-        if( psDec->exc_Q14[ i ] > 0 ) {
-            psDec->exc_Q14[ i ] -= QUANT_LEVEL_ADJUST_Q10 << 4;
+        psDec->exc_Q10[ i ] = silk_LSHIFT( ( opus_int32 )pulses[ i ], 10 );
+        if( psDec->exc_Q10[ i ] > 0 ) {
+            psDec->exc_Q10[ i ] -= QUANT_LEVEL_ADJUST_Q10;
         } else
-        if( psDec->exc_Q14[ i ] < 0 ) {
-            psDec->exc_Q14[ i ] += QUANT_LEVEL_ADJUST_Q10 << 4;
+        if( psDec->exc_Q10[ i ] < 0 ) {
+            psDec->exc_Q10[ i ] += QUANT_LEVEL_ADJUST_Q10;
         }
-        psDec->exc_Q14[ i ] += offset_Q10 << 4;
-        if( rand_seed < 0 ) {
-           psDec->exc_Q14[ i ] = -psDec->exc_Q14[ i ];
-        }
+        psDec->exc_Q10[ i ] += offset_Q10;
+        psDec->exc_Q10[ i ] ^= silk_RSHIFT( rand_seed, 31 );
 
-        rand_seed = silk_ADD32_ovflw( rand_seed, pulses[ i ] );
+        rand_seed = silk_ADD32_ovflw(rand_seed, pulses[ i ]);
     }
 
     /* Copy LPC state */
     silk_memcpy( sLPC_Q14, psDec->sLPC_Q14_buf, MAX_LPC_ORDER * sizeof( opus_int32 ) );
 
-    pexc_Q14 = psDec->exc_Q14;
+    pexc_Q10 = psDec->exc_Q10;
     pxq      = xq;
     sLTP_buf_idx = psDec->ltp_mem_length;
     /* Loop over subframes */
     for( k = 0; k < psDec->nb_subfr; k++ ) {
-        pres_Q14 = res_Q14;
+        pres_Q10 = res_Q10;
         A_Q12 = psDecCtrl->PredCoef_Q12[ k >> 1 ];
 
         /* Preload LPC coeficients to array on stack. Gives small performance gain */
@@ -96,23 +94,23 @@ void silk_decode_core(
         signalType   = psDec->indices.signalType;
 
         Gain_Q10     = silk_RSHIFT( psDecCtrl->Gains_Q16[ k ], 6 );
-        inv_gain_Q31 = silk_INVERSE32_varQ( psDecCtrl->Gains_Q16[ k ], 47 );
+        inv_gain_Q16 = silk_INVERSE32_varQ( psDecCtrl->Gains_Q16[ k ], 32 );
+        inv_gain_Q16 = silk_min( inv_gain_Q16, silk_int16_MAX );
 
-        /* Calculate gain adjustment factor */
-        if( psDecCtrl->Gains_Q16[ k ] != psDec->prev_gain_Q16 ) {
-            gain_adj_Q16 =  silk_DIV32_varQ( psDec->prev_gain_Q16, psDecCtrl->Gains_Q16[ k ], 16 );
+        /* Calculate Gain adjustment factor */
+        gain_adj_Q16 = 1 << 16;
+        if( inv_gain_Q16 != psDec->prev_inv_gain_Q16 ) {
+            gain_adj_Q16 =  silk_DIV32_varQ( inv_gain_Q16, psDec->prev_inv_gain_Q16, 16 );
 
             /* Scale short term state */
             for( i = 0; i < MAX_LPC_ORDER; i++ ) {
                 sLPC_Q14[ i ] = silk_SMULWW( gain_adj_Q16, sLPC_Q14[ i ] );
             }
-        } else {
-            gain_adj_Q16 = 1 << 16;
         }
 
         /* Save inv_gain */
-        silk_assert( inv_gain_Q31 != 0 );
-        psDec->prev_gain_Q16 = psDecCtrl->Gains_Q16[ k ];
+        silk_assert( inv_gain_Q16 != 0 );
+        psDec->prev_inv_gain_Q16 = inv_gain_Q16;
 
         /* Avoid abrupt transition from voiced PLC to unvoiced normal decoding */
         if( psDec->lossCnt && psDec->prevSignalType == TYPE_VOICED &&
@@ -143,18 +141,19 @@ void silk_decode_core(
                     A_Q12, psDec->ltp_mem_length - start_idx, psDec->LPC_order );
 
                 /* After rewhitening the LTP state is unscaled */
+                inv_gain_Q32 = silk_LSHIFT( inv_gain_Q16, 16 );
                 if( k == 0 ) {
                     /* Do LTP downscaling to reduce inter-packet dependency */
-                    inv_gain_Q31 = silk_LSHIFT( silk_SMULWB( inv_gain_Q31, psDecCtrl->LTP_scale_Q14 ), 2 );
+                    inv_gain_Q32 = silk_LSHIFT( silk_SMULWB( inv_gain_Q32, psDecCtrl->LTP_scale_Q14 ), 2 );
                 }
                 for( i = 0; i < lag + LTP_ORDER/2; i++ ) {
-                    sLTP_Q15[ sLTP_buf_idx - i - 1 ] = silk_SMULWB( inv_gain_Q31, sLTP[ psDec->ltp_mem_length - i - 1 ] );
+                    sLTP_Q16[ sLTP_buf_idx - i - 1 ] = silk_SMULWB( inv_gain_Q32, sLTP[ psDec->ltp_mem_length - i - 1 ] );
                 }
             } else {
                 /* Update LTP state when Gain changes */
                 if( gain_adj_Q16 != 1 << 16 ) {
                     for( i = 0; i < lag + LTP_ORDER/2; i++ ) {
-                        sLTP_Q15[ sLTP_buf_idx - i - 1 ] = silk_SMULWW( gain_adj_Q16, sLTP_Q15[ sLTP_buf_idx - i - 1 ] );
+                        sLTP_Q16[ sLTP_buf_idx - i - 1 ] = silk_SMULWW( gain_adj_Q16, sLTP_Q16[ sLTP_buf_idx - i - 1 ] );
                     }
                 }
             }
@@ -162,36 +161,31 @@ void silk_decode_core(
 
         /* Long-term prediction */
         if( signalType == TYPE_VOICED ) {
-            /* Set up pointer */
-            pred_lag_ptr = &sLTP_Q15[ sLTP_buf_idx - lag + LTP_ORDER / 2 ];
+            /* Setup pointer */
+            pred_lag_ptr = &sLTP_Q16[ sLTP_buf_idx - lag + LTP_ORDER / 2 ];
             for( i = 0; i < psDec->subfr_length; i++ ) {
                 /* Unrolled loop */
-                /* Avoids introducing a bias because silk_SMLAWB() always rounds to -inf */
-                LTP_pred_Q13 = 2;
-                LTP_pred_Q13 = silk_SMLAWB( LTP_pred_Q13, pred_lag_ptr[  0 ], B_Q14[ 0 ] );
-                LTP_pred_Q13 = silk_SMLAWB( LTP_pred_Q13, pred_lag_ptr[ -1 ], B_Q14[ 1 ] );
-                LTP_pred_Q13 = silk_SMLAWB( LTP_pred_Q13, pred_lag_ptr[ -2 ], B_Q14[ 2 ] );
-                LTP_pred_Q13 = silk_SMLAWB( LTP_pred_Q13, pred_lag_ptr[ -3 ], B_Q14[ 3 ] );
-                LTP_pred_Q13 = silk_SMLAWB( LTP_pred_Q13, pred_lag_ptr[ -4 ], B_Q14[ 4 ] );
+                LTP_pred_Q14 = silk_SMULWB(               pred_lag_ptr[  0 ], B_Q14[ 0 ] );
+                LTP_pred_Q14 = silk_SMLAWB( LTP_pred_Q14, pred_lag_ptr[ -1 ], B_Q14[ 1 ] );
+                LTP_pred_Q14 = silk_SMLAWB( LTP_pred_Q14, pred_lag_ptr[ -2 ], B_Q14[ 2 ] );
+                LTP_pred_Q14 = silk_SMLAWB( LTP_pred_Q14, pred_lag_ptr[ -3 ], B_Q14[ 3 ] );
+                LTP_pred_Q14 = silk_SMLAWB( LTP_pred_Q14, pred_lag_ptr[ -4 ], B_Q14[ 4 ] );
                 pred_lag_ptr++;
 
                 /* Generate LPC excitation */
-                pres_Q14[ i ] = silk_ADD_LSHIFT32( pexc_Q14[ i ], LTP_pred_Q13, 1 );
+                pres_Q10[ i ] = silk_ADD32( pexc_Q10[ i ], silk_RSHIFT_ROUND( LTP_pred_Q14, 4 ) );
 
                 /* Update states */
-                sLTP_Q15[ sLTP_buf_idx ] = silk_LSHIFT( pres_Q14[ i ], 1 );
+                sLTP_Q16[ sLTP_buf_idx ] = silk_LSHIFT( pres_Q10[ i ], 6 );
                 sLTP_buf_idx++;
             }
         } else {
-            pres_Q14 = pexc_Q14;
+            pres_Q10 = pexc_Q10;
         }
 
         for( i = 0; i < psDec->subfr_length; i++ ) {
-            /* Short-term prediction */
-            silk_assert( psDec->LPC_order == 10 || psDec->LPC_order == 16 );
-            /* Avoids introducing a bias because silk_SMLAWB() always rounds to -inf */
-            LPC_pred_Q10 = silk_RSHIFT( psDec->LPC_order, 1 );
-            LPC_pred_Q10 = silk_SMLAWB( LPC_pred_Q10, sLPC_Q14[ MAX_LPC_ORDER + i -  1 ], A_Q12_tmp[ 0 ] );
+            /* Partially unrolled */
+            LPC_pred_Q10 = silk_SMULWB(               sLPC_Q14[ MAX_LPC_ORDER + i -  1 ], A_Q12_tmp[ 0 ] );
             LPC_pred_Q10 = silk_SMLAWB( LPC_pred_Q10, sLPC_Q14[ MAX_LPC_ORDER + i -  2 ], A_Q12_tmp[ 1 ] );
             LPC_pred_Q10 = silk_SMLAWB( LPC_pred_Q10, sLPC_Q14[ MAX_LPC_ORDER + i -  3 ], A_Q12_tmp[ 2 ] );
             LPC_pred_Q10 = silk_SMLAWB( LPC_pred_Q10, sLPC_Q14[ MAX_LPC_ORDER + i -  4 ], A_Q12_tmp[ 3 ] );
@@ -201,27 +195,20 @@ void silk_decode_core(
             LPC_pred_Q10 = silk_SMLAWB( LPC_pred_Q10, sLPC_Q14[ MAX_LPC_ORDER + i -  8 ], A_Q12_tmp[ 7 ] );
             LPC_pred_Q10 = silk_SMLAWB( LPC_pred_Q10, sLPC_Q14[ MAX_LPC_ORDER + i -  9 ], A_Q12_tmp[ 8 ] );
             LPC_pred_Q10 = silk_SMLAWB( LPC_pred_Q10, sLPC_Q14[ MAX_LPC_ORDER + i - 10 ], A_Q12_tmp[ 9 ] );
-            if( psDec->LPC_order == 16 ) {
-                LPC_pred_Q10 = silk_SMLAWB( LPC_pred_Q10, sLPC_Q14[ MAX_LPC_ORDER + i - 11 ], A_Q12_tmp[ 10 ] );
-                LPC_pred_Q10 = silk_SMLAWB( LPC_pred_Q10, sLPC_Q14[ MAX_LPC_ORDER + i - 12 ], A_Q12_tmp[ 11 ] );
-                LPC_pred_Q10 = silk_SMLAWB( LPC_pred_Q10, sLPC_Q14[ MAX_LPC_ORDER + i - 13 ], A_Q12_tmp[ 12 ] );
-                LPC_pred_Q10 = silk_SMLAWB( LPC_pred_Q10, sLPC_Q14[ MAX_LPC_ORDER + i - 14 ], A_Q12_tmp[ 13 ] );
-                LPC_pred_Q10 = silk_SMLAWB( LPC_pred_Q10, sLPC_Q14[ MAX_LPC_ORDER + i - 15 ], A_Q12_tmp[ 14 ] );
-                LPC_pred_Q10 = silk_SMLAWB( LPC_pred_Q10, sLPC_Q14[ MAX_LPC_ORDER + i - 16 ], A_Q12_tmp[ 15 ] );
+            for( j = 10; j < psDec->LPC_order; j++ ) {
+                LPC_pred_Q10 = silk_SMLAWB( LPC_pred_Q10, sLPC_Q14[ MAX_LPC_ORDER + i - j - 1 ], A_Q12_tmp[ j ] );
             }
 
             /* Add prediction to LPC excitation */
-            sLPC_Q14[ MAX_LPC_ORDER + i ] = silk_ADD_LSHIFT32( pres_Q14[ i ], LPC_pred_Q10, 4 );
+            sLPC_Q14[ MAX_LPC_ORDER + i ] = silk_LSHIFT( silk_ADD32( pres_Q10[ i ], LPC_pred_Q10 ), 4 );
 
-            /* Scale with gain */
-            pxq[ i ] = (opus_int16)silk_SAT16( silk_RSHIFT_ROUND( silk_SMULWW( sLPC_Q14[ MAX_LPC_ORDER + i ], Gain_Q10 ), 8 ) );
+            /* Scale with Gain */
+            pxq[ i ] = ( opus_int16 )silk_SAT16( silk_RSHIFT_ROUND( silk_SMULWW( sLPC_Q14[ MAX_LPC_ORDER + i ], Gain_Q10 ), 8 ) );
         }
-
-        /* DEBUG_STORE_DATA( dec.pcm, pxq, psDec->subfr_length * sizeof( opus_int16 ) ) */
 
         /* Update LPC filter state */
         silk_memcpy( sLPC_Q14, &sLPC_Q14[ psDec->subfr_length ], MAX_LPC_ORDER * sizeof( opus_int32 ) );
-        pexc_Q14 += psDec->subfr_length;
+        pexc_Q10 += psDec->subfr_length;
         pxq      += psDec->subfr_length;
     }
 

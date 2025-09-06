@@ -1,28 +1,28 @@
 /***********************************************************************
 Copyright (c) 2006-2011, Skype Limited. All rights reserved.
 Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions
-are met:
+modification, (subject to the limitations in the disclaimer below)
+are permitted provided that the following conditions are met:
 - Redistributions of source code must retain the above copyright notice,
 this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the 
-names of specific contributors, may be used to endorse or promote
-products derived from this software without specific prior written
-permission.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGE.
+- Neither the name of Skype Limited, nor the names of specific
+contributors, may be used to endorse or promote products derived from
+this software without specific prior written permission.
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+CONTRIBUTORS ''AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***********************************************************************/
 
 #ifndef SILK_STRUCTS_H
@@ -44,15 +44,15 @@ extern "C"
 /************************************/
 typedef struct {
     opus_int16                  xq[           2 * MAX_FRAME_LENGTH ]; /* Buffer for quantized output signal                             */
-    opus_int32                  sLTP_shp_Q14[ 2 * MAX_FRAME_LENGTH ];
+    opus_int32                  sLTP_shp_Q10[ 2 * MAX_FRAME_LENGTH ];
     opus_int32                  sLPC_Q14[ MAX_SUB_FRAME_LENGTH + NSQ_LPC_BUF_LENGTH ];
     opus_int32                  sAR2_Q14[ MAX_SHAPE_LPC_ORDER ];
-    opus_int32                  sLF_AR_shp_Q14;
+    opus_int32                  sLF_AR_shp_Q12;
     opus_int                    lagPrev;
     opus_int                    sLTP_buf_idx;
     opus_int                    sLTP_shp_buf_idx;
     opus_int32                  rand_seed;
-    opus_int32                  prev_gain_Q16;
+    opus_int32                  prev_inv_gain_Q16;
     opus_int                    rewhite_flag;
 } silk_nsq_state;
 
@@ -150,6 +150,7 @@ typedef struct {
     opus_int                     minInternal_fs_Hz;                 /* Minimum internal sampling frequency (Hz)                         */
     opus_int                     desiredInternal_fs_Hz;             /* Soft request for internal sampling frequency (Hz)                */
     opus_int                     fs_kHz;                            /* Internal sampling frequency (kHz)                                */
+    opus_int                     delay;                             /* Number of samples of delay to apply */
     opus_int                     nb_subfr;                          /* Number of 5 ms subframes in a frame                              */
     opus_int                     frame_length;                      /* Frame length (samples)                                           */
     opus_int                     subfr_length;                      /* Subframe length (samples)                                        */
@@ -193,6 +194,7 @@ typedef struct {
 
     /* Input/output buffering */
     opus_int16                   inputBuf[ MAX_FRAME_LENGTH + 2 ];  /* Buffer containing input signal                                   */
+    opus_int16                   delayBuf[MAX_ENCODER_DELAY];
     opus_int                     inputBufIx;
     opus_int                     nFramesPerPacket;
     opus_int                     nFramesEncoded;                    /* Number of frames analyzed in current packet                      */
@@ -243,7 +245,7 @@ typedef struct {
 
 /* Struct for CNG */
 typedef struct {
-    opus_int32                  CNG_exc_buf_Q14[ MAX_FRAME_LENGTH ];
+    opus_int32                  CNG_exc_buf_Q10[ MAX_FRAME_LENGTH ];
     opus_int16                  CNG_smth_NLSF_Q15[ MAX_LPC_ORDER ];
     opus_int32                  CNG_synth_state[ MAX_LPC_ORDER ];
     opus_int32                  CNG_smth_Gain_Q16;
@@ -255,10 +257,12 @@ typedef struct {
 /* Decoder state                */
 /********************************/
 typedef struct {
-    opus_int32                  prev_gain_Q16;
-    opus_int32                  exc_Q14[ MAX_FRAME_LENGTH ];
+    opus_int32                  prev_inv_gain_Q16;
+    opus_int32                  exc_Q10[ MAX_FRAME_LENGTH ];
     opus_int32                  sLPC_Q14_buf[ MAX_LPC_ORDER ];
     opus_int16                  outBuf[ MAX_FRAME_LENGTH + 2 * MAX_SUB_FRAME_LENGTH ];  /* Buffer for output signal                     */
+    opus_int16                  delayBuf[ MAX_DECODER_DELAY ];      /* Buffer for delaying the SILK output prior to resampling          */
+    opus_int                    delay;                              /* How much decoder delay to add                                    */
     opus_int                    lagPrev;                            /* Previous Lag                                                     */
     opus_int8                   LastGainIndex;                      /* Previous gain index                                              */
     opus_int                    fs_kHz;                             /* Sampling frequency in kHz                                        */

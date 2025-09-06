@@ -1,32 +1,32 @@
 /***********************************************************************
 Copyright (c) 2006-2011, Skype Limited. All rights reserved.
 Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions
-are met:
+modification, (subject to the limitations in the disclaimer below)
+are permitted provided that the following conditions are met:
 - Redistributions of source code must retain the above copyright notice,
 this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the 
-names of specific contributors, may be used to endorse or promote
-products derived from this software without specific prior written
-permission.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGE.
+- Neither the name of Skype Limited, nor the names of specific
+contributors, may be used to endorse or promote products derived from
+this software without specific prior written permission.
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+CONTRIBUTORS ''AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***********************************************************************/
 
-#ifndef SILK_SIGPROC_FIX_H
-#define SILK_SIGPROC_FIX_H
+#ifndef _SILK_SIGPROC_FIX_H_
+#define _SILK_SIGPROC_FIX_H_
 #include "opus/config.h"
 
 #ifdef  __cplusplus
@@ -53,20 +53,19 @@ extern "C"
  * Initialize/reset the resampler state for a given pair of input/output sampling rates
 */
 opus_int silk_resampler_init(
-    silk_resampler_state_struct *S,                 /* I/O  Resampler state                                             */
-    opus_int32                  Fs_Hz_in,           /* I    Input sampling rate (Hz)                                    */
-    opus_int32                  Fs_Hz_out,          /* I    Output sampling rate (Hz)                                   */
-    opus_int                    forEnc              /* I    If 1: encoder; if 0: decoder                                */
+    silk_resampler_state_struct *S,                 /* I/O   Resampler state                                            */
+    opus_int32                  Fs_Hz_in,           /* I     Input sampling rate (Hz)                                   */
+    opus_int32                  Fs_Hz_out           /* I     Output sampling rate (Hz)                                  */
 );
 
 /*!
  * Resampler: convert from one sampling rate to another
  */
 opus_int silk_resampler(
-    silk_resampler_state_struct *S,                 /* I/O  Resampler state                                             */
-    opus_int16                  out[],              /* O    Output signal                                               */
-    const opus_int16            in[],               /* I    Input signal                                                */
-    opus_int32                  inLen               /* I    Number of input samples                                     */
+    silk_resampler_state_struct *S,                 /* I/O   Resampler state                                            */
+    opus_int16                  out[],              /* O     Output signal                                              */
+    const opus_int16            in[],               /* I     Input signal                                               */
+    opus_int32                  inLen               /* I     Number of input samples                                    */
 );
 
 /*!
@@ -129,14 +128,15 @@ void silk_bwexpander_32(
 
 /* Compute inverse of LPC prediction gain, and                           */
 /* test if LPC coefficients are stable (all poles within unit circle)    */
-opus_int32 silk_LPC_inverse_pred_gain(              /* O   Returns inverse prediction gain in energy domain, Q30        */
+opus_int silk_LPC_inverse_pred_gain(                /* O   Returns 1 if unstable, otherwise 0                           */
+    opus_int32                  *invGain_Q30,       /* O   Inverse prediction gain, Q30 energy domain                   */
     const opus_int16            *A_Q12,             /* I   Prediction coefficients, Q12 [order]                         */
     const opus_int              order               /* I   Prediction order                                             */
 );
 
-/* For input in Q24 domain */
-opus_int32 silk_LPC_inverse_pred_gain_Q24(          /* O    Returns inverse prediction gain in energy domain, Q30       */
-    const opus_int32            *A_Q24,             /* I    Prediction coefficients [order]                             */
+opus_int silk_LPC_inverse_pred_gain_Q24(            /* O    Returns 1 if unstable, otherwise 0                          */
+    opus_int32                  *invGain_Q30,       /* O    Inverse prediction gain, Q30 energy domain                  */
+    const opus_int32            *A_Q24,             /* I    Prediction coefficients, Q24 [order]                        */
     const opus_int              order               /* I    Prediction order                                            */
 );
 
@@ -314,9 +314,9 @@ void silk_burg_modified(
     opus_int                    *res_nrg_Q,         /* O    Residual energy Q value                                     */
     opus_int32                  A_Q16[],            /* O    Prediction coefficients (length order)                      */
     const opus_int16            x[],                /* I    Input signal, length: nb_subfr * ( D + subfr_length )       */
-    const opus_int32            minInvGain_Q30,     /* I    Inverse of max prediction gain                              */
     const opus_int              subfr_length,       /* I    Input signal subframe length (incl. D preceeding samples)   */
     const opus_int              nb_subfr,           /* I    Number of subframes stacked in x                            */
+    const opus_int32            WhiteNoiseFrac_Q32, /* I    Fraction added to zero-lag autocorrelation                  */
     const opus_int              D                   /* I    Order                                                       */
 );
 
@@ -389,9 +389,9 @@ static inline opus_int32 silk_ROR32( opus_int32 a32, opus_int rot )
 #endif
 
 /* Useful Macros that can be adjusted to other platforms */
-#define silk_memcpy(dest, src, size)        memcpy((dest), (src), (size))
-#define silk_memset(dest, src, size)        memset((dest), (src), (size))
-#define silk_memmove(dest, src, size)       memmove((dest), (src), (size))
+#define silk_memcpy(a, b, c)                memcpy((a), (b), (c))    /* Dest, Src, ByteCount    */
+#define silk_memset(a, b, c)                memset((a), (b), (c))    /* Dest, value, ByteCount  */
+#define silk_memmove(a, b, c)               memmove((a), (b), (c))   /* Dest, Src, ByteCount    */
 
 /* Fixed point macros */
 
@@ -592,4 +592,4 @@ static inline opus_int64 silk_max_64(opus_int64 a, opus_int64 b)
 }
 #endif
 
-#endif /* SILK_SIGPROC_FIX_H */
+#endif
