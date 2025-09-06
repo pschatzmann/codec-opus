@@ -12,16 +12,11 @@
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
 
-   - Neither the name of Internet Society, IETF or IETF Trust, nor the
-   names of specific contributors, may be used to endorse or promote
-   products derived from this software without specific prior written
-   permission.
-
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-   A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER
-   OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+   A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR
+   CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
    EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
@@ -118,14 +113,14 @@ extern "C" {
 /** @endcond */
 
 /** @defgroup ctlvalues Pre-defined values for CTL interface
-  * @see genericctls, encoderctls
+  * @see genericctls,encoderctls
   * @{
   */
 /* Values for the various encoder CTLs */
 #define OPUS_AUTO                           -1000 /**<Auto/default setting @hideinitializer*/
 #define OPUS_BITRATE_MAX                       -1 /**<Maximum bitrate @hideinitializer*/
 
-/** Best for most VoIP/videoconference applications where listening quality and intelligibility matter most
+/** Best for "standard" VoIP/videoconference applications where listening quality and intelligibility matter most
  * @hideinitializer */
 #define OPUS_APPLICATION_VOIP                2048
 /** Best for broadcast/high-fidelity application where the decoded audio should be as close as possible to the input
@@ -147,26 +142,7 @@ extern "C" {
 
 
 /** @defgroup encoderctls Encoder related CTLs
-  *
-  * These are convenience macros for use with the \c opus_encode_ctl
-  * interface. They are used to generate the appropriate series of
-  * arguments for that call, passing the correct type, size and so
-  * on as expected for each particular request.
-  *
-  * Some usage examples:
-  *
-  * @code
-  * int ret;
-  * ret = opus_encoder_ctl(enc_ctx, OPUS_SET_BANDWIDTH(OPUS_AUTO));
-  * if (ret != OPUS_OK) return ret;
-  *
-  * int rate;
-  * opus_encoder_ctl(enc_ctx, OPUS_GET_BANDWIDTH(&rate));
-  *
-  * opus_encoder_ctl(enc_ctx, OPUS_RESET_STATE);
-  * @endcode
-  *
-  * @see genericctls, opusencoder
+  * @see genericctls,opusencoder
   * @{
   */
 
@@ -287,8 +263,6 @@ extern "C" {
   * The supported values are:
   *  - OPUS_APPLICATION_VOIP Process signal for improved speech intelligibility
   *  - OPUS_APPLICATION_AUDIO Favor faithfulness to the original input
-  *  - OPUS_APPLICATION_RESTRICTED_LOWDELAY Configure the minimum possible coding delay
-  *
   * @param[in] x <tt>int</tt>:     Application value
   * @hideinitializer */
 #define OPUS_SET_APPLICATION(x) OPUS_SET_APPLICATION_REQUEST, __opus_check_int(x)
@@ -353,36 +327,7 @@ extern "C" {
 /**@}*/
 
 /** @defgroup genericctls Generic CTLs
-  *
-  * These macros are used with the \c opus_decoder_ctl and
-  * \c opus_encoder_ctl calls to generate a particular
-  * request.
-  *
-  * When called on an \c OpusDecoder they apply to that
-  * particular decoder instance. When called on an
-  * \c OpusEncoder they apply to the corresponding setting
-  * on that encoder instance, if present.
-  *
-  * Some usage examples:
-  *
-  * @code
-  * int ret;
-  * opus_int32 pitch;
-  * ret = opus_decoder_ctl(dec_ctx, OPUS_GET_PITCH(&pitch));
-  * if (ret == OPUS_OK) return ret;
-  *
-  * opus_encoder_ctl(enc_ctx, OPUS_RESET_STATE);
-  * opus_decoder_ctl(dec_ctx, OPUS_RESET_STATE);
-  *
-  * opus_int32 enc_bw, dec_bw;
-  * opus_encoder_ctl(enc_ctx, OPUS_GET_BANDWIDTH(&enc_bw));
-  * opus_decoder_ctl(dec_ctx, OPUS_GET_BANDWIDTH(&dec_bw));
-  * if (enc_bw != dec_bw) {
-  *   printf("packet bandwidth mismatch!\n");
-  * }
-  * @endcode
-  *
-  * @see opusencoder, opus_decoder_ctl, opus_encoder_ctl
+  * @see opus_encoder_ctl,opusencoder,opusdecoder
   * @{
   */
 
@@ -407,8 +352,6 @@ extern "C" {
   * This can be used for any post-processing algorithm requiring the use of pitch,
   * e.g. time stretching/shortening. If the last frame was not voiced, or if the
   * pitch was not coded in the frame, then zero is returned.
-  *
-  * This CTL is only implemented for decoder instances.
   *
   * @param[out] x <tt>opus_int32*</tt>: pitch period at 48 kHz (or 0 if not available)
   *

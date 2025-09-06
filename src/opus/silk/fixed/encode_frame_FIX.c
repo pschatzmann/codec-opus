@@ -1,28 +1,28 @@
 /***********************************************************************
 Copyright (c) 2006-2011, Skype Limited. All rights reserved.
 Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions
-are met:
+modification, (subject to the limitations in the disclaimer below)
+are permitted provided that the following conditions are met:
 - Redistributions of source code must retain the above copyright notice,
 this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the 
-names of specific contributors, may be used to endorse or promote
-products derived from this software without specific prior written
-permission.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGE.
+- Neither the name of Skype Limited, nor the names of specific
+contributors, may be used to endorse or promote products derived from
+this software without specific prior written permission.
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+CONTRIBUTORS ''AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***********************************************************************/
 
 #if defined(HAVE_CONFIG_H) || defined(ARDUINO)
@@ -36,7 +36,7 @@ POSSIBILITY OF SUCH DAMAGE.
 static inline void silk_LBRR_encode_FIX(
     silk_encoder_state_FIX          *psEnc,                                 /* I/O  Pointer to Silk FIX encoder state                                           */
     silk_encoder_control_FIX        *psEncCtrl,                             /* I/O  Pointer to Silk FIX encoder control struct                                  */
-    const opus_int32                xfw_Q3[],                               /* I    Input signal                                                                */
+    const opus_int16                xfw[],                                  /* I    Input signal                                                                */
     opus_int                        condCoding                              /* I    The type of conditional coding used so far for this frame                   */
 );
 
@@ -85,7 +85,7 @@ opus_int silk_encode_frame_FIX(
     silk_encoder_control_FIX sEncCtrl;
     opus_int     i, iter, maxIter, found_upper, found_lower, ret = 0;
     opus_int16   *x_frame, *res_pitch_frame;
-    opus_int32   xfw_Q3[ MAX_FRAME_LENGTH ];
+    opus_int16   xfw[ MAX_FRAME_LENGTH ];
     opus_int16   res_pitch[ 2 * MAX_FRAME_LENGTH + LA_PITCH_MAX ];
     ec_enc       sRangeEnc_copy, sRangeEnc_copy2;
     silk_nsq_state sNSQ_copy, sNSQ_copy2;
@@ -103,7 +103,7 @@ opus_int silk_encode_frame_FIX(
     psEnc->sCmn.indices.Seed = psEnc->sCmn.frameCounter++ & 3;
 
     /**************************************************************/
-    /* Set up Input Pointers, and insert frame in input buffer   */
+    /* Setup Input Pointers, and insert frame in input buffer    */
     /*************************************************************/
     /* pointers aligned with start of frame to encode */
     x_frame         = psEnc->x_buf + psEnc->sCmn.ltp_mem_length;    /* start of frame to encode */
@@ -119,39 +119,49 @@ opus_int silk_encode_frame_FIX(
     /*******************************************/
     silk_memcpy( x_frame + LA_SHAPE_MS * psEnc->sCmn.fs_kHz, psEnc->sCmn.inputBuf + 1, psEnc->sCmn.frame_length * sizeof( opus_int16 ) );
 
-    if( !psEnc->sCmn.prefillFlag ) {
-        /*****************************************/
-        /* Find pitch lags, initial LPC analysis */
-        /*****************************************/
-        silk_find_pitch_lags_FIX( psEnc, &sEncCtrl, res_pitch, x_frame );
+    /*****************************************/
+    /* Find pitch lags, initial LPC analysis */
+    /*****************************************/
+    silk_find_pitch_lags_FIX( psEnc, &sEncCtrl, res_pitch, x_frame );
 
-        /************************/
-        /* Noise shape analysis */
-        /************************/
-        silk_noise_shape_analysis_FIX( psEnc, &sEncCtrl, res_pitch_frame, x_frame );
+    /************************/
+    /* Noise shape analysis */
+    /************************/
+    silk_noise_shape_analysis_FIX( psEnc, &sEncCtrl, res_pitch_frame, x_frame );
 
-        /***************************************************/
-        /* Find linear prediction coefficients (LPC + LTP) */
-        /***************************************************/
-        silk_find_pred_coefs_FIX( psEnc, &sEncCtrl, res_pitch, x_frame, condCoding );
+    /***************************************************/
+    /* Find linear prediction coefficients (LPC + LTP) */
+    /***************************************************/
+    silk_find_pred_coefs_FIX( psEnc, &sEncCtrl, res_pitch, x_frame, condCoding );
 
-        /****************************************/
-        /* Process gains                        */
-        /****************************************/
-        silk_process_gains_FIX( psEnc, &sEncCtrl, condCoding );
+    /****************************************/
+    /* Process gains                        */
+    /****************************************/
+    silk_process_gains_FIX( psEnc, &sEncCtrl, condCoding );
 
-        /*****************************************/
-        /* Prefiltering for noise shaper         */
-        /*****************************************/
-        silk_prefilter_FIX( psEnc, &sEncCtrl, xfw_Q3, x_frame );
+    /*****************************************/
+    /* Prefiltering for noise shaper         */
+    /*****************************************/
+    silk_prefilter_FIX( psEnc, &sEncCtrl, xfw, x_frame );
 
-        /****************************************/
-        /* Low Bitrate Redundant Encoding       */
-        /****************************************/
-        silk_LBRR_encode_FIX( psEnc, &sEncCtrl, xfw_Q3, condCoding );
+    /****************************************/
+    /* Low Bitrate Redundant Encoding       */
+    /****************************************/
+    silk_LBRR_encode_FIX( psEnc, &sEncCtrl, xfw, condCoding );
 
+    if( psEnc->sCmn.prefillFlag ) {
+        if( psEnc->sCmn.nStatesDelayedDecision > 1 || psEnc->sCmn.warping_Q16 > 0 ) {
+            silk_NSQ_del_dec( &psEnc->sCmn, &psEnc->sCmn.sNSQ, &psEnc->sCmn.indices, xfw, psEnc->sCmn.pulses,
+                   sEncCtrl.PredCoef_Q12[ 0 ], sEncCtrl.LTPCoef_Q14, sEncCtrl.AR2_Q13, sEncCtrl.HarmShapeGain_Q14,
+                   sEncCtrl.Tilt_Q14, sEncCtrl.LF_shp_Q14, sEncCtrl.Gains_Q16, sEncCtrl.pitchL, sEncCtrl.Lambda_Q10, sEncCtrl.LTP_scale_Q14 );
+        } else {
+            silk_NSQ( &psEnc->sCmn, &psEnc->sCmn.sNSQ, &psEnc->sCmn.indices, xfw, psEnc->sCmn.pulses,
+                   sEncCtrl.PredCoef_Q12[ 0 ], sEncCtrl.LTPCoef_Q14, sEncCtrl.AR2_Q13, sEncCtrl.HarmShapeGain_Q14,
+                   sEncCtrl.Tilt_Q14, sEncCtrl.LF_shp_Q14, sEncCtrl.Gains_Q16, sEncCtrl.pitchL, sEncCtrl.Lambda_Q10, sEncCtrl.LTP_scale_Q14 );
+        }
+    } else {
         /* Loop over quantizer and entropy coding to control bitrate */
-        maxIter = 6;
+        maxIter = 5;
         gainMult_Q8 = SILK_FIX_CONST( 1, 8 );
         found_lower = 0;
         found_upper = 0;
@@ -183,11 +193,11 @@ opus_int silk_encode_frame_FIX(
                 /* Noise shaping quantization            */
                 /*****************************************/
                 if( psEnc->sCmn.nStatesDelayedDecision > 1 || psEnc->sCmn.warping_Q16 > 0 ) {
-                    silk_NSQ_del_dec( &psEnc->sCmn, &psEnc->sCmn.sNSQ, &psEnc->sCmn.indices, xfw_Q3, psEnc->sCmn.pulses,
+                    silk_NSQ_del_dec( &psEnc->sCmn, &psEnc->sCmn.sNSQ, &psEnc->sCmn.indices, xfw, psEnc->sCmn.pulses,
                            sEncCtrl.PredCoef_Q12[ 0 ], sEncCtrl.LTPCoef_Q14, sEncCtrl.AR2_Q13, sEncCtrl.HarmShapeGain_Q14,
                            sEncCtrl.Tilt_Q14, sEncCtrl.LF_shp_Q14, sEncCtrl.Gains_Q16, sEncCtrl.pitchL, sEncCtrl.Lambda_Q10, sEncCtrl.LTP_scale_Q14 );
                 } else {
-                    silk_NSQ( &psEnc->sCmn, &psEnc->sCmn.sNSQ, &psEnc->sCmn.indices, xfw_Q3, psEnc->sCmn.pulses,
+                    silk_NSQ( &psEnc->sCmn, &psEnc->sCmn.sNSQ, &psEnc->sCmn.indices, xfw, psEnc->sCmn.pulses,
                             sEncCtrl.PredCoef_Q12[ 0 ], sEncCtrl.LTPCoef_Q14, sEncCtrl.AR2_Q13, sEncCtrl.HarmShapeGain_Q14,
                             sEncCtrl.Tilt_Q14, sEncCtrl.LF_shp_Q14, sEncCtrl.Gains_Q16, sEncCtrl.pitchL, sEncCtrl.Lambda_Q10, sEncCtrl.LTP_scale_Q14 );
                 }
@@ -316,7 +326,7 @@ opus_int silk_encode_frame_FIX(
 static inline void silk_LBRR_encode_FIX(
     silk_encoder_state_FIX          *psEnc,                                 /* I/O  Pointer to Silk FIX encoder state                                           */
     silk_encoder_control_FIX        *psEncCtrl,                             /* I/O  Pointer to Silk FIX encoder control struct                                  */
-    const opus_int32                xfw_Q3[],                               /* I    Input signal                                                                */
+    const opus_int16                xfw[],                                  /* I    Input signal                                                                */
     opus_int                        condCoding                              /* I    The type of conditional coding used so far for this frame                   */
 )
 {
@@ -355,12 +365,12 @@ static inline void silk_LBRR_encode_FIX(
         /* Noise shaping quantization            */
         /*****************************************/
         if( psEnc->sCmn.nStatesDelayedDecision > 1 || psEnc->sCmn.warping_Q16 > 0 ) {
-            silk_NSQ_del_dec( &psEnc->sCmn, &sNSQ_LBRR, psIndices_LBRR, xfw_Q3,
+            silk_NSQ_del_dec( &psEnc->sCmn, &sNSQ_LBRR, psIndices_LBRR, xfw,
                 psEnc->sCmn.pulses_LBRR[ psEnc->sCmn.nFramesEncoded ], psEncCtrl->PredCoef_Q12[ 0 ], psEncCtrl->LTPCoef_Q14,
                 psEncCtrl->AR2_Q13, psEncCtrl->HarmShapeGain_Q14, psEncCtrl->Tilt_Q14, psEncCtrl->LF_shp_Q14,
                 psEncCtrl->Gains_Q16, psEncCtrl->pitchL, psEncCtrl->Lambda_Q10, psEncCtrl->LTP_scale_Q14 );
         } else {
-            silk_NSQ( &psEnc->sCmn, &sNSQ_LBRR, psIndices_LBRR, xfw_Q3,
+            silk_NSQ( &psEnc->sCmn, &sNSQ_LBRR, psIndices_LBRR, xfw,
                 psEnc->sCmn.pulses_LBRR[ psEnc->sCmn.nFramesEncoded ], psEncCtrl->PredCoef_Q12[ 0 ], psEncCtrl->LTPCoef_Q14,
                 psEncCtrl->AR2_Q13, psEncCtrl->HarmShapeGain_Q14, psEncCtrl->Tilt_Q14, psEncCtrl->LF_shp_Q14,
                 psEncCtrl->Gains_Q16, psEncCtrl->pitchL, psEncCtrl->Lambda_Q10, psEncCtrl->LTP_scale_Q14 );

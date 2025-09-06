@@ -1,32 +1,32 @@
 /***********************************************************************
 Copyright (c) 2006-2011, Skype Limited. All rights reserved.
 Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions
-are met:
+modification, (subject to the limitations in the disclaimer below)
+are permitted provided that the following conditions are met:
 - Redistributions of source code must retain the above copyright notice,
 this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the 
-names of specific contributors, may be used to endorse or promote
-products derived from this software without specific prior written
-permission.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGE.
+- Neither the name of Skype Limited, nor the names of specific
+contributors, may be used to endorse or promote products derived from
+this software without specific prior written permission.
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+CONTRIBUTORS ''AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***********************************************************************/
 
-#ifndef MACRO_DEBUG_H
-#define MACRO_DEBUG_H
+#ifndef _MACRO_DEBUG_H_
+#define _MACRO_DEBUG_H_
 
 /* Redefine macro functions with extensive assertion in DEBUG mode.
    As functions can't be undefined, this file can't work with SigProcFIX_MacroCount.h */
@@ -91,24 +91,24 @@ static inline opus_int64 silk_SUB64(opus_int64 a, opus_int64 b){
 static inline opus_int16 silk_ADD_SAT16( opus_int16 a16, opus_int16 b16 ) {
     opus_int16 res;
     res = (opus_int16)silk_SAT16( silk_ADD32( (opus_int32)(a16), (b16) ) );
-    silk_assert( res == silk_SAT16( (opus_int32)a16 + (opus_int32)b16 ) );
+    silk_assert( res == silk_SAT16( ( opus_int32 )a16 + ( opus_int32 )b16 ) );
     return res;
 }
 
 #undef silk_ADD_SAT32
 static inline opus_int32 silk_ADD_SAT32(opus_int32 a32, opus_int32 b32){
     opus_int32 res;
-    res =    ((((a32) + (b32)) & 0x80000000) == 0 ?                                   \
+    res =    ((((a32) + (b32)) & 0x80000000) == 0 ?                                    \
             ((((a32) & (b32)) & 0x80000000) != 0 ? silk_int32_MIN : (a32)+(b32)) :    \
             ((((a32) | (b32)) & 0x80000000) == 0 ? silk_int32_MAX : (a32)+(b32)) );
-    silk_assert( res == silk_SAT32( (opus_int64)a32 + (opus_int64)b32 ) );
+    silk_assert( res == silk_SAT32( ( opus_int64 )a32 + ( opus_int64 )b32 ) );
     return res;
 }
 
 #undef silk_ADD_SAT64
 static inline opus_int64 silk_ADD_SAT64( opus_int64 a64, opus_int64 b64 ) {
     opus_int64 res;
-    res =    ((((a64) + (b64)) & 0x8000000000000000LL) == 0 ?                                   \
+    res =    ((((a64) + (b64)) & 0x8000000000000000LL) == 0 ?                                \
             ((((a64) & (b64)) & 0x8000000000000000LL) != 0 ? silk_int64_MIN : (a64)+(b64)) :    \
             ((((a64) | (b64)) & 0x8000000000000000LL) == 0 ? silk_int64_MAX : (a64)+(b64)) );
     if( res != a64 + b64 ) {
@@ -126,24 +126,24 @@ static inline opus_int64 silk_ADD_SAT64( opus_int64 a64, opus_int64 b64 ) {
 static inline opus_int16 silk_SUB_SAT16( opus_int16 a16, opus_int16 b16 ) {
     opus_int16 res;
     res = (opus_int16)silk_SAT16( silk_SUB32( (opus_int32)(a16), (b16) ) );
-    silk_assert( res == silk_SAT16( (opus_int32)a16 - (opus_int32)b16 ) );
+    silk_assert( res == silk_SAT16( ( opus_int32 )a16 - ( opus_int32 )b16 ) );
     return res;
 }
 
 #undef silk_SUB_SAT32
 static inline opus_int32 silk_SUB_SAT32( opus_int32 a32, opus_int32 b32 ) {
     opus_int32 res;
-    res =     ((((a32)-(b32)) & 0x80000000) == 0 ?                                           \
+    res =     ((((a32)-(b32)) & 0x80000000) == 0 ?                                            \
             (( (a32) & ((b32)^0x80000000) & 0x80000000) ? silk_int32_MIN : (a32)-(b32)) :    \
             ((((a32)^0x80000000) & (b32)  & 0x80000000) ? silk_int32_MAX : (a32)-(b32)) );
-    silk_assert( res == silk_SAT32( (opus_int64)a32 - (opus_int64)b32 ) );
+    silk_assert( res == silk_SAT32( ( opus_int64 )a32 - ( opus_int64 )b32 ) );
     return res;
 }
 
 #undef silk_SUB_SAT64
 static inline opus_int64 silk_SUB_SAT64( opus_int64 a64, opus_int64 b64 ) {
     opus_int64 res;
-    res =    ((((a64)-(b64)) & 0x8000000000000000LL) == 0 ?                                                      \
+    res =    ((((a64)-(b64)) & 0x8000000000000000LL) == 0 ?                                                        \
             (( (a64) & ((b64)^0x8000000000000000LL) & 0x8000000000000000LL) ? silk_int64_MIN : (a64)-(b64)) :    \
             ((((a64)^0x8000000000000000LL) & (b64)  & 0x8000000000000000LL) ? silk_int64_MAX : (a64)-(b64)) );
 
@@ -566,4 +566,4 @@ static inline opus_int32 silk_CHECK_FIT32( opus_int64 a ){
 */
 
 #endif
-#endif /* MACRO_DEBUG_H */
+#endif /* _MACRO_DEBUG_H_ */

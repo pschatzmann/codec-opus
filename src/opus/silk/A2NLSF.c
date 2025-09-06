@@ -1,28 +1,28 @@
 /***********************************************************************
 Copyright (c) 2006-2011, Skype Limited. All rights reserved.
 Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions
-are met:
+modification, (subject to the limitations in the disclaimer below)
+are permitted provided that the following conditions are met:
 - Redistributions of source code must retain the above copyright notice,
 this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the 
-names of specific contributors, may be used to endorse or promote
-products derived from this software without specific prior written
-permission.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGE.
+- Neither the name of Skype Limited, nor the names of specific
+contributors, may be used to endorse or promote products derived from
+this software without specific prior written permission.
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+CONTRIBUTORS ''AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
+BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***********************************************************************/
 
 /* Conversion between prediction filter coefficients and NLSFs  */
@@ -40,6 +40,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 /* Number of binary divisions, when not in low complexity mode */
 #define BIN_DIV_STEPS_A2NLSF_FIX      3 /* must be no higher than 16 - log2( LSF_COS_TAB_SZ_FIX ) */
+#define QPoly                        16
 #define MAX_ITERATIONS_A2NLSF_FIX    30
 
 /* Helper function for A2NLSF(..)                    */
@@ -60,8 +61,8 @@ static inline void silk_A2NLSF_trans_poly(
 }
 /* Helper function for A2NLSF(..) */
 /* Polynomial evaluation          */
-static inline opus_int32 silk_A2NLSF_eval_poly( /* return the polynomial evaluation, in Q16     */
-    opus_int32          *p,                     /* I    Polynomial, Q16                         */
+static inline opus_int32 silk_A2NLSF_eval_poly( /* return the polynomial evaluation, in QPoly   */
+    opus_int32          *p,                     /* I    Polynomial, QPoly                       */
     const opus_int32    x,                      /* I    Evaluation point, Q12                   */
     const opus_int      dd                      /* I    Order                                   */
 )
@@ -69,10 +70,10 @@ static inline opus_int32 silk_A2NLSF_eval_poly( /* return the polynomial evaluat
     opus_int   n;
     opus_int32 x_Q16, y32;
 
-    y32 = p[ dd ];                                  /* Q16 */
+    y32 = p[ dd ];                                  /* QPoly */
     x_Q16 = silk_LSHIFT( x, 4 );
     for( n = dd - 1; n >= 0; n-- ) {
-        y32 = silk_SMLAWW( p[ n ], y32, x_Q16 );    /* Q16 */
+        y32 = silk_SMLAWW( p[ n ], y32, x_Q16 );    /* QPoly */
     }
     return y32;
 }
@@ -87,11 +88,19 @@ static inline void silk_A2NLSF_init(
     opus_int k;
 
     /* Convert filter coefs to even and odd polynomials */
-    P[dd] = silk_LSHIFT( 1, 16 );
-    Q[dd] = silk_LSHIFT( 1, 16 );
+    P[dd] = silk_LSHIFT( 1, QPoly );
+    Q[dd] = silk_LSHIFT( 1, QPoly );
     for( k = 0; k < dd; k++ ) {
-        P[ k ] = -a_Q16[ dd - k - 1 ] - a_Q16[ dd + k ];    /* Q16 */
-        Q[ k ] = -a_Q16[ dd - k - 1 ] + a_Q16[ dd + k ];    /* Q16 */
+#if( QPoly < 16 )
+        P[ k ] = silk_RSHIFT_ROUND( -a_Q16[ dd - k - 1 ] - a_Q16[ dd + k ], 16 - QPoly ); /* QPoly */
+        Q[ k ] = silk_RSHIFT_ROUND( -a_Q16[ dd - k - 1 ] + a_Q16[ dd + k ], 16 - QPoly ); /* QPoly */
+#elif( Qpoly == 16 )
+        P[ k ] = -a_Q16[ dd - k - 1 ] - a_Q16[ dd + k ]; /* QPoly*/
+        Q[ k ] = -a_Q16[ dd - k - 1 ] + a_Q16[ dd + k ]; /* QPoly*/
+#else
+        P[ k ] = silk_LSHIFT( -a_Q16[ dd - k - 1 ] - a_Q16[ dd + k ], QPoly - 16 ); /* QPoly */
+        Q[ k ] = silk_LSHIFT( -a_Q16[ dd - k - 1 ] + a_Q16[ dd + k ], QPoly - 16 ); /* QPoly */
+#endif
     }
 
     /* Divide out zeros as we have that for even filter orders, */
