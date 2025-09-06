@@ -65,6 +65,9 @@ def main():
         if not tag.startswith('v'):
             print(f"Tag '{tag}' does not start with 'v', skipping.")
             continue
+        if '-' in tag:
+            print(f"Tag '{tag}' contains '-', skipping.")
+            continue
         if 'beta' in tag.lower() or 'rc' in tag.lower():
             print(f"Tag '{tag}' contains 'beta' or 'rc', skipping.")
             continue
