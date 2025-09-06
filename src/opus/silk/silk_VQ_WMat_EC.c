@@ -1,48 +1,52 @@
 /***********************************************************************
-Copyright (c) 2006-2011, Skype Limited. All rights reserved. 
-Redistribution and use in source and binary forms, with or without 
-modification, (subject to the limitations in the disclaimer below) 
+Copyright (c) 2006-2011, Skype Limited. All rights reserved.
+Redistribution and use in source and binary forms, with or without
+modification, (subject to the limitations in the disclaimer below)
 are permitted provided that the following conditions are met:
 - Redistributions of source code must retain the above copyright notice,
 this list of conditions and the following disclaimer.
-- Redistributions in binary form must reproduce the above copyright 
-notice, this list of conditions and the following disclaimer in the 
+- Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Skype Limited, nor the names of specific 
-contributors, may be used to endorse or promote products derived from 
+- Neither the name of Skype Limited, nor the names of specific
+contributors, may be used to endorse or promote products derived from
 this software without specific prior written permission.
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED 
-BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND 
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
 CONTRIBUTORS ''AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
-BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND 
-FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE 
-COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, 
+BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
 INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
-NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF 
-USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON 
-ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ***********************************************************************/
+
+#if defined(HAVE_CONFIG_H) || defined(ARDUINO)
+#include "opus/config.h"
+#endif
 
 #include "silk_main.h"
 
 /* Entropy constrained matrix-weighted VQ, hard-coded to 5-element vectors, for a single input data vector */
 void silk_VQ_WMat_EC(
-    SKP_int8                        *ind,               /* O    index of best codebook vector               */
-    SKP_int32                       *rate_dist_Q14,     /* O    best weighted quantization error + mu * rate*/
-    const SKP_int16                 *in_Q14,            /* I    input vector to be quantized                */
-    const SKP_int32                 *W_Q18,             /* I    weighting matrix                            */
-    const SKP_int8                  *cb_Q7,             /* I    codebook                                    */
-    const SKP_uint8                 *cl_Q5,             /* I    code length for each codebook vector        */
-    const SKP_int                   mu_Q9,              /* I    tradeoff between weighted error and rate    */
-    SKP_int                         L                   /* I    number of vectors in codebook               */
+    opus_int8                        *ind,               /* O    index of best codebook vector               */
+    opus_int32                       *rate_dist_Q14,     /* O    best weighted quantization error + mu * rate*/
+    const opus_int16                 *in_Q14,            /* I    input vector to be quantized                */
+    const opus_int32                 *W_Q18,             /* I    weighting matrix                            */
+    const opus_int8                  *cb_Q7,             /* I    codebook                                    */
+    const opus_uint8                 *cl_Q5,             /* I    code length for each codebook vector        */
+    const opus_int                   mu_Q9,              /* I    tradeoff between weighted error and rate    */
+    opus_int                         L                   /* I    number of vectors in codebook               */
 )
 {
-    SKP_int   k;
-    const SKP_int8 *cb_row_Q7;
-    SKP_int16 diff_Q14[ 5 ];
-    SKP_int32 sum1_Q14, sum2_Q16;
+    opus_int   k;
+    const opus_int8 *cb_row_Q7;
+    opus_int16 diff_Q14[ 5 ];
+    opus_int32 sum1_Q14, sum2_Q16;
 
     /* Loop over codebook */
     *rate_dist_Q14 = SKP_int32_MAX;
@@ -69,7 +73,7 @@ void silk_VQ_WMat_EC(
         sum1_Q14 = SKP_SMLAWB( sum1_Q14, sum2_Q16,    diff_Q14[ 0 ] );
 
         /* second row of W_Q18 */
-        sum2_Q16 = SKP_SMULWB(           W_Q18[  7 ], diff_Q14[ 2 ] ); 
+        sum2_Q16 = SKP_SMULWB(           W_Q18[  7 ], diff_Q14[ 2 ] );
         sum2_Q16 = SKP_SMLAWB( sum2_Q16, W_Q18[  8 ], diff_Q14[ 3 ] );
         sum2_Q16 = SKP_SMLAWB( sum2_Q16, W_Q18[  9 ], diff_Q14[ 4 ] );
         sum2_Q16 = SKP_LSHIFT( sum2_Q16, 1 );
@@ -77,20 +81,20 @@ void silk_VQ_WMat_EC(
         sum1_Q14 = SKP_SMLAWB( sum1_Q14, sum2_Q16,    diff_Q14[ 1 ] );
 
         /* third row of W_Q18 */
-        sum2_Q16 = SKP_SMULWB(           W_Q18[ 13 ], diff_Q14[ 3 ] ); 
+        sum2_Q16 = SKP_SMULWB(           W_Q18[ 13 ], diff_Q14[ 3 ] );
         sum2_Q16 = SKP_SMLAWB( sum2_Q16, W_Q18[ 14 ], diff_Q14[ 4 ] );
         sum2_Q16 = SKP_LSHIFT( sum2_Q16, 1 );
         sum2_Q16 = SKP_SMLAWB( sum2_Q16, W_Q18[ 12 ], diff_Q14[ 2 ] );
         sum1_Q14 = SKP_SMLAWB( sum1_Q14, sum2_Q16,    diff_Q14[ 2 ] );
 
         /* fourth row of W_Q18 */
-        sum2_Q16 = SKP_SMULWB(           W_Q18[ 19 ], diff_Q14[ 4 ] ); 
+        sum2_Q16 = SKP_SMULWB(           W_Q18[ 19 ], diff_Q14[ 4 ] );
         sum2_Q16 = SKP_LSHIFT( sum2_Q16, 1 );
         sum2_Q16 = SKP_SMLAWB( sum2_Q16, W_Q18[ 18 ], diff_Q14[ 3 ] );
         sum1_Q14 = SKP_SMLAWB( sum1_Q14, sum2_Q16,    diff_Q14[ 3 ] );
 
         /* last row of W_Q18 */
-        sum2_Q16 = SKP_SMULWB(           W_Q18[ 24 ], diff_Q14[ 4 ] ); 
+        sum2_Q16 = SKP_SMULWB(           W_Q18[ 24 ], diff_Q14[ 4 ] );
         sum1_Q14 = SKP_SMLAWB( sum1_Q14, sum2_Q16,    diff_Q14[ 4 ] );
 
         SKP_assert( sum1_Q14 >= 0 );
@@ -98,7 +102,7 @@ void silk_VQ_WMat_EC(
         /* find best */
         if( sum1_Q14 < *rate_dist_Q14 ) {
             *rate_dist_Q14 = sum1_Q14;
-            *ind = (SKP_int8)k;
+            *ind = (opus_int8)k;
         }
 
         /* Go to next cbk vector */
