@@ -11,6 +11,11 @@
        this list of conditions and the following disclaimer in the
        documentation and/or other materials provided with the distribution.
 
+   - Neither the name of Internet Society, IETF or IETF Trust, nor the
+   names of specific contributors, may be used to endorse or promote
+   products derived from this software without specific prior written
+   permission.
+
   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -48,27 +53,27 @@
 #include "arch.h"
 
 
+# define SAMPPROD long long
 #define SAMP_MAX 2147483647
 #define TWID_MAX 32767
 #define TRIG_UPSCALE 1
 
 #define SAMP_MIN -SAMP_MAX
 
-#ifdef ENABLE_QEXT
-#   define S_MUL(a,b) MULT32_32_P31(b, a)
-#   define S_MUL2(a,b) MULT32_32_P31(b, a)
-#else
+
 #   define S_MUL(a,b) MULT16_32_Q15(b, a)
-#   define S_MUL2(a,b) MULT16_32_Q16(b, a)
-#endif
 
 #   define C_MUL(m,a,b) \
-      do{ (m).r = SUB32_ovflw(S_MUL((a).r,(b).r) , S_MUL((a).i,(b).i)); \
-          (m).i = ADD32_ovflw(S_MUL((a).r,(b).i) , S_MUL((a).i,(b).r)); }while(0)
+      do{ (m).r = SUB32(S_MUL((a).r,(b).r) , S_MUL((a).i,(b).i)); \
+          (m).i = ADD32(S_MUL((a).r,(b).i) , S_MUL((a).i,(b).r)); }while(0)
 
 #   define C_MULC(m,a,b) \
-      do{ (m).r = ADD32_ovflw(S_MUL((a).r,(b).r) , S_MUL((a).i,(b).i)); \
-          (m).i = SUB32_ovflw(S_MUL((a).i,(b).r) , S_MUL((a).r,(b).i)); }while(0)
+      do{ (m).r = ADD32(S_MUL((a).r,(b).r) , S_MUL((a).i,(b).i)); \
+          (m).i = SUB32(S_MUL((a).i,(b).r) , S_MUL((a).r,(b).i)); }while(0)
+
+#   define C_MUL4(m,a,b) \
+      do{ (m).r = SHR(SUB32(S_MUL((a).r,(b).r) , S_MUL((a).i,(b).i)),2); \
+          (m).i = SHR(ADD32(S_MUL((a).r,(b).i) , S_MUL((a).i,(b).r)),2); }while(0)
 
 #   define C_MULBYSCALAR( c, s ) \
       do{ (c).r =  S_MUL( (c).r , s ) ;\
@@ -82,34 +87,22 @@
                 DIVSCALAR( (c).i  , div); }while (0)
 
 #define  C_ADD( res, a,b)\
-    do {(res).r=ADD32_ovflw((a).r,(b).r);  (res).i=ADD32_ovflw((a).i,(b).i); \
+    do {(res).r=ADD32((a).r,(b).r);  (res).i=ADD32((a).i,(b).i); \
     }while(0)
 #define  C_SUB( res, a,b)\
-    do {(res).r=SUB32_ovflw((a).r,(b).r);  (res).i=SUB32_ovflw((a).i,(b).i); \
+    do {(res).r=SUB32((a).r,(b).r);  (res).i=SUB32((a).i,(b).i); \
     }while(0)
 #define C_ADDTO( res , a)\
-    do {(res).r = ADD32_ovflw((res).r, (a).r);  (res).i = ADD32_ovflw((res).i,(a).i);\
+    do {(res).r = ADD32((res).r, (a).r);  (res).i = ADD32((res).i,(a).i);\
     }while(0)
 
 #define C_SUBFROM( res , a)\
-    do {(res).r = ADD32_ovflw((res).r,(a).r);  (res).i = SUB32_ovflw((res).i,(a).i); \
+    do {(res).r = ADD32((res).r,(a).r);  (res).i = SUB32((res).i,(a).i); \
     }while(0)
-
-#if defined(OPUS_ARM_INLINE_ASM)
-#include "arm/kiss_fft_armv4.h"
-#endif
-
-#if defined(OPUS_ARM_INLINE_EDSP)
-#include "arm/kiss_fft_armv5e.h"
-#endif
-#if defined(__mips_dsp) && __mips == 32
-#include "mips/kiss_fft_mipsr1.h"
-#endif
 
 #else  /* not FIXED_POINT*/
 
 #   define S_MUL(a,b) ( (a)*(b) )
-#   define S_MUL2(a,b) ( (a)*(b) )
 #define C_MUL(m,a,b) \
     do{ (m).r = (a).r*(b).r - (a).i*(b).i;\
         (m).i = (a).r*(b).i + (a).i*(b).r; }while(0)

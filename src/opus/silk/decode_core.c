@@ -8,11 +8,11 @@ this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the
+- Neither the name of Internet Society, IETF or IETF Trust, nor the 
 names of specific contributors, may be used to endorse or promote
 products derived from this software without specific prior written
 permission.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
 ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
@@ -30,7 +30,6 @@ POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #include "main.h"
-#include "opus/celt/stack_alloc.h"
 
 /**********************************************************/
 /* Core decoder. Performs inverse NSQ operation LTP + LPC */
@@ -39,32 +38,19 @@ void silk_decode_core(
     silk_decoder_state          *psDec,                         /* I/O  Decoder state                               */
     silk_decoder_control        *psDecCtrl,                     /* I    Decoder control                             */
     opus_int16                  xq[],                           /* O    Decoded speech                              */
-    const opus_int16            pulses[ MAX_FRAME_LENGTH ],     /* I    Pulse signal                                */
-    int                         arch                            /* I    Run-time architecture                       */
+    const opus_int              pulses[ MAX_FRAME_LENGTH ]      /* I    Pulse signal                                */
 )
 {
     opus_int   i, k, lag = 0, start_idx, sLTP_buf_idx, NLSF_interpolation_flag, signalType;
     opus_int16 *A_Q12, *B_Q14, *pxq, A_Q12_tmp[ MAX_LPC_ORDER ];
-    VARDECL( opus_int16, sLTP );
-    VARDECL( opus_int32, sLTP_Q15 );
+    opus_int16 sLTP[ MAX_FRAME_LENGTH ];
+    opus_int32 sLTP_Q15[ 2 * MAX_FRAME_LENGTH ];
     opus_int32 LTP_pred_Q13, LPC_pred_Q10, Gain_Q10, inv_gain_Q31, gain_adj_Q16, rand_seed, offset_Q10;
     opus_int32 *pred_lag_ptr, *pexc_Q14, *pres_Q14;
-    VARDECL( opus_int32, res_Q14 );
-    VARDECL( opus_int32, sLPC_Q14 );
-    SAVE_STACK;
+    opus_int32 res_Q14[ MAX_SUB_FRAME_LENGTH ];
+    opus_int32 sLPC_Q14[ MAX_SUB_FRAME_LENGTH + MAX_LPC_ORDER ];
 
     silk_assert( psDec->prev_gain_Q16 != 0 );
-
-    ALLOC( sLTP, psDec->ltp_mem_length, opus_int16 );
-    ALLOC( sLTP_Q15, psDec->ltp_mem_length + psDec->frame_length, opus_int32 );
-    ALLOC( res_Q14, psDec->subfr_length, opus_int32 );
-    /* Work around a clang bug (verified with clang 6.0 through clang 20.1.0) that causes the last
-       memset to be flagged as an invalid read by valgrind (not caught by asan). */
-#if defined(__clang__) && defined(VAR_ARRAYS)
-    ALLOC( sLPC_Q14, MAX_SUB_FRAME_LENGTH + MAX_LPC_ORDER, opus_int32 );
-#else
-    ALLOC( sLPC_Q14, psDec->subfr_length + MAX_LPC_ORDER, opus_int32 );
-#endif
 
     offset_Q10 = silk_Quantization_Offsets_Q10[ psDec->indices.signalType >> 1 ][ psDec->indices.quantOffsetType ];
 
@@ -104,7 +90,7 @@ void silk_decode_core(
         pres_Q14 = res_Q14;
         A_Q12 = psDecCtrl->PredCoef_Q12[ k >> 1 ];
 
-        /* Preload LPC coefficients to array on stack. Gives small performance gain */
+        /* Preload LPC coeficients to array on stack. Gives small performance gain */
         silk_memcpy( A_Q12_tmp, A_Q12, psDec->LPC_order * sizeof( opus_int16 ) );
         B_Q14        = &psDecCtrl->LTPCoef_Q14[ k * LTP_ORDER ];
         signalType   = psDec->indices.signalType;
@@ -121,7 +107,7 @@ void silk_decode_core(
                 sLPC_Q14[ i ] = silk_SMULWW( gain_adj_Q16, sLPC_Q14[ i ] );
             }
         } else {
-            gain_adj_Q16 = (opus_int32)1 << 16;
+            gain_adj_Q16 = 1 << 16;
         }
 
         /* Save inv_gain */
@@ -147,14 +133,14 @@ void silk_decode_core(
             if( k == 0 || ( k == 2 && NLSF_interpolation_flag ) ) {
                 /* Rewhiten with new A coefs */
                 start_idx = psDec->ltp_mem_length - lag - psDec->LPC_order - LTP_ORDER / 2;
-                celt_assert( start_idx > 0 );
+                silk_assert( start_idx > 0 );
 
                 if( k == 2 ) {
                     silk_memcpy( &psDec->outBuf[ psDec->ltp_mem_length ], xq, 2 * psDec->subfr_length * sizeof( opus_int16 ) );
                 }
 
                 silk_LPC_analysis_filter( &sLTP[ start_idx ], &psDec->outBuf[ start_idx + k * psDec->subfr_length ],
-                    A_Q12, psDec->ltp_mem_length - start_idx, psDec->LPC_order, arch );
+                    A_Q12, psDec->ltp_mem_length - start_idx, psDec->LPC_order );
 
                 /* After rewhitening the LTP state is unscaled */
                 if( k == 0 ) {
@@ -166,7 +152,7 @@ void silk_decode_core(
                 }
             } else {
                 /* Update LTP state when Gain changes */
-                if( gain_adj_Q16 != (opus_int32)1 << 16 ) {
+                if( gain_adj_Q16 != 1 << 16 ) {
                     for( i = 0; i < lag + LTP_ORDER/2; i++ ) {
                         sLTP_Q15[ sLTP_buf_idx - i - 1 ] = silk_SMULWW( gain_adj_Q16, sLTP_Q15[ sLTP_buf_idx - i - 1 ] );
                     }
@@ -202,7 +188,7 @@ void silk_decode_core(
 
         for( i = 0; i < psDec->subfr_length; i++ ) {
             /* Short-term prediction */
-            celt_assert( psDec->LPC_order == 10 || psDec->LPC_order == 16 );
+            silk_assert( psDec->LPC_order == 10 || psDec->LPC_order == 16 );
             /* Avoids introducing a bias because silk_SMLAWB() always rounds to -inf */
             LPC_pred_Q10 = silk_RSHIFT( psDec->LPC_order, 1 );
             LPC_pred_Q10 = silk_SMLAWB( LPC_pred_Q10, sLPC_Q14[ MAX_LPC_ORDER + i -  1 ], A_Q12_tmp[ 0 ] );
@@ -225,11 +211,13 @@ void silk_decode_core(
             }
 
             /* Add prediction to LPC excitation */
-            sLPC_Q14[ MAX_LPC_ORDER + i ] = silk_ADD_SAT32( pres_Q14[ i ], silk_LSHIFT_SAT32( LPC_pred_Q10, 4 ) );
+            sLPC_Q14[ MAX_LPC_ORDER + i ] = silk_ADD_LSHIFT32( pres_Q14[ i ], LPC_pred_Q10, 4 );
 
             /* Scale with gain */
             pxq[ i ] = (opus_int16)silk_SAT16( silk_RSHIFT_ROUND( silk_SMULWW( sLPC_Q14[ MAX_LPC_ORDER + i ], Gain_Q10 ), 8 ) );
         }
+
+        /* DEBUG_STORE_DATA( dec.pcm, pxq, psDec->subfr_length * sizeof( opus_int16 ) ) */
 
         /* Update LPC filter state */
         silk_memcpy( sLPC_Q14, &sLPC_Q14[ psDec->subfr_length ], MAX_LPC_ORDER * sizeof( opus_int32 ) );
@@ -239,5 +227,4 @@ void silk_decode_core(
 
     /* Save LPC state */
     silk_memcpy( psDec->sLPC_Q14_buf, sLPC_Q14, MAX_LPC_ORDER * sizeof( opus_int32 ) );
-    RESTORE_STACK;
 }

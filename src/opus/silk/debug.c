@@ -8,11 +8,11 @@ this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the
+- Neither the name of Internet Society, IETF or IETF Trust, nor the 
 names of specific contributors, may be used to endorse or promote
 products derived from this software without specific prior written
 permission.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
 ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
@@ -29,15 +29,12 @@ POSSIBILITY OF SUCH DAMAGE.
 #include "opus/config.h"
 #endif
 
-typedef int prevent_empty_translation_unit_warning;
-
 #include "debug.h"
-
-#if SILK_DEBUG || SILK_TIC_TOC
 #include "SigProc_FIX.h"
-#endif
 
 #if SILK_TIC_TOC
+
+#ifdef _WIN32
 
 #if (defined(_WIN32) || defined(_WINCE))
 #include <windows.h>    /* timer */
@@ -45,7 +42,6 @@ typedef int prevent_empty_translation_unit_warning;
 #include <sys/time.h>
 #endif
 
-#ifdef _WIN32
 unsigned long silk_GetHighResolutionTime(void) /* O  time in usec*/
 {
     /* Returns a time counter in microsec   */
@@ -69,7 +65,7 @@ unsigned long GetHighResolutionTime(void) /* O  time in usec*/
 int           silk_Timer_nTimers = 0;
 int           silk_Timer_depth_ctr = 0;
 char          silk_Timer_tags[silk_NUM_TIMERS_MAX][silk_NUM_TIMERS_MAX_TAG_LEN];
-#ifdef _WIN32
+#ifdef WIN32
 LARGE_INTEGER silk_Timer_start[silk_NUM_TIMERS_MAX];
 #else
 unsigned long silk_Timer_start[silk_NUM_TIMERS_MAX];
@@ -80,7 +76,7 @@ opus_int64     silk_Timer_sum[silk_NUM_TIMERS_MAX];
 opus_int64     silk_Timer_max[silk_NUM_TIMERS_MAX];
 opus_int64     silk_Timer_depth[silk_NUM_TIMERS_MAX];
 
-#ifdef _WIN32
+#ifdef WIN32
 void silk_TimerSave(char *file_name)
 {
     if( silk_Timer_nTimers > 0 )
@@ -171,3 +167,4 @@ void silk_TimerSave(char *file_name)
 FILE *silk_debug_store_fp[ silk_NUM_STORES_MAX ];
 int silk_debug_store_count = 0;
 #endif /* SILK_DEBUG */
+

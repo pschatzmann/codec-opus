@@ -8,11 +8,11 @@ this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the
+- Neither the name of Internet Society, IETF or IETF Trust, nor the 
 names of specific contributors, may be used to endorse or promote
 products derived from this software without specific prior written
 permission.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
 ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
@@ -35,13 +35,13 @@ POSSIBILITY OF SUCH DAMAGE.
 opus_int silk_decoder_set_fs(
     silk_decoder_state          *psDec,                         /* I/O  Decoder state pointer                       */
     opus_int                    fs_kHz,                         /* I    Sampling frequency (kHz)                    */
-    opus_int32                  fs_API_Hz                       /* I    API Sampling frequency (Hz)                 */
+    opus_int                    fs_API_Hz                       /* I    API Sampling frequency (Hz)                 */
 )
 {
     opus_int frame_length, ret = 0;
 
-    celt_assert( fs_kHz == 8 || fs_kHz == 12 || fs_kHz == 16 );
-    celt_assert( psDec->nb_subfr == MAX_NB_SUBFR || psDec->nb_subfr == MAX_NB_SUBFR/2 );
+    silk_assert( fs_kHz == 8 || fs_kHz == 12 || fs_kHz == 16 );
+    silk_assert( psDec->nb_subfr == MAX_NB_SUBFR || psDec->nb_subfr == MAX_NB_SUBFR/2 );
 
     /* New (sub)frame length */
     psDec->subfr_length = silk_SMULBB( SUB_FRAME_LENGTH_MS, fs_kHz );
@@ -86,7 +86,7 @@ opus_int silk_decoder_set_fs(
                 psDec->pitch_lag_low_bits_iCDF = silk_uniform4_iCDF;
             } else {
                 /* unsupported sampling rate */
-                celt_assert( 0 );
+                silk_assert( 0 );
             }
             psDec->first_frame_after_reset = 1;
             psDec->lagPrev                 = 100;
@@ -101,7 +101,8 @@ opus_int silk_decoder_set_fs(
     }
 
     /* Check that settings are valid */
-    celt_assert( psDec->frame_length > 0 && psDec->frame_length <= MAX_FRAME_LENGTH );
+    silk_assert( psDec->frame_length > 0 && psDec->frame_length <= MAX_FRAME_LENGTH );
 
     return ret;
 }
+

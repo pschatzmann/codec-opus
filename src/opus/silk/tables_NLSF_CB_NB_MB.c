@@ -8,11 +8,11 @@ this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the
+- Neither the name of Internet Society, IETF or IETF Trust, nor the 
 names of specific contributors, may be used to endorse or promote
 products derived from this software without specific prior written
 permission.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
 ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
@@ -31,7 +31,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include "tables.h"
 
-static const opus_uint8 silk_NLSF_CB1_NB_MB_Q8[ 320 ] = {
+const opus_uint8 silk_NLSF_CB1_NB_MB_Q8[ 320 ] = {
         12,     35,     60,     83,    108,    132,    157,    180,
        206,    228,     15,     32,     55,     77,    101,    125,
        151,    175,    201,    225,     19,     42,     66,     89,
@@ -74,42 +74,7 @@ static const opus_uint8 silk_NLSF_CB1_NB_MB_Q8[ 320 ] = {
         64,     84,    104,    118,    156,    177,    201,    230
 };
 
-static const opus_int16 silk_NLSF_CB1_Wght_Q9[ 320 ] = {
-     2897, 2314, 2314, 2314, 2287, 2287, 2314, 2300, 2327, 2287,
-     2888, 2580, 2394, 2367, 2314, 2274, 2274, 2274, 2274, 2194,
-     2487, 2340, 2340, 2314, 2314, 2314, 2340, 2340, 2367, 2354,
-     3216, 2766, 2340, 2340, 2314, 2274, 2221, 2207, 2261, 2194,
-     2460, 2474, 2367, 2394, 2394, 2394, 2394, 2367, 2407, 2314,
-     3479, 3056, 2127, 2207, 2274, 2274, 2274, 2287, 2314, 2261,
-     3282, 3141, 2580, 2394, 2247, 2221, 2207, 2194, 2194, 2114,
-     4096, 3845, 2221, 2620, 2620, 2407, 2314, 2394, 2367, 2074,
-     3178, 3244, 2367, 2221, 2553, 2434, 2340, 2314, 2167, 2221,
-     3338, 3488, 2726, 2194, 2261, 2460, 2354, 2367, 2207, 2101,
-     2354, 2420, 2327, 2367, 2394, 2420, 2420, 2420, 2460, 2367,
-     3779, 3629, 2434, 2527, 2367, 2274, 2274, 2300, 2207, 2048,
-     3254, 3225, 2713, 2846, 2447, 2327, 2300, 2300, 2274, 2127,
-     3263, 3300, 2753, 2806, 2447, 2261, 2261, 2247, 2127, 2101,
-     2873, 2981, 2633, 2367, 2407, 2354, 2194, 2247, 2247, 2114,
-     3225, 3197, 2633, 2580, 2274, 2181, 2247, 2221, 2221, 2141,
-     3178, 3310, 2740, 2407, 2274, 2274, 2274, 2287, 2194, 2114,
-     3141, 3272, 2460, 2061, 2287, 2500, 2367, 2487, 2434, 2181,
-     3507, 3282, 2314, 2700, 2647, 2474, 2367, 2394, 2340, 2127,
-     3423, 3535, 3038, 3056, 2300, 1950, 2221, 2274, 2274, 2274,
-     3404, 3366, 2087, 2687, 2873, 2354, 2420, 2274, 2474, 2540,
-     3760, 3488, 1950, 2660, 2897, 2527, 2394, 2367, 2460, 2261,
-     3028, 3272, 2740, 2888, 2740, 2154, 2127, 2287, 2234, 2247,
-     3695, 3657, 2025, 1969, 2660, 2700, 2580, 2500, 2327, 2367,
-     3207, 3413, 2354, 2074, 2888, 2888, 2340, 2487, 2247, 2167,
-     3338, 3366, 2846, 2780, 2327, 2154, 2274, 2287, 2114, 2061,
-     2327, 2300, 2181, 2167, 2181, 2367, 2633, 2700, 2700, 2553,
-     2407, 2434, 2221, 2261, 2221, 2221, 2340, 2420, 2607, 2700,
-     3038, 3244, 2806, 2888, 2474, 2074, 2300, 2314, 2354, 2380,
-     2221, 2154, 2127, 2287, 2500, 2793, 2793, 2620, 2580, 2367,
-     3676, 3713, 2234, 1838, 2181, 2753, 2726, 2673, 2513, 2207,
-     2793, 3160, 2726, 2553, 2846, 2513, 2181, 2394, 2221, 2181
-};
-
-static const opus_uint8 silk_NLSF_CB1_iCDF_NB_MB[ 64 ] = {
+const opus_uint8 silk_NLSF_CB1_iCDF_NB_MB[ 64 ] = {
        212,    178,    148,    129,    108,     96,     85,     82,
         79,     77,     61,     59,     57,     56,     51,     49,
         48,     45,     42,     41,     40,     38,     36,     34,
@@ -120,7 +85,7 @@ static const opus_uint8 silk_NLSF_CB1_iCDF_NB_MB[ 64 ] = {
         28,     20,     19,     18,     12,     11,      5,      0
 };
 
-static const opus_uint8 silk_NLSF_CB2_SELECT_NB_MB[ 160 ] = {
+const opus_uint8 silk_NLSF_CB2_SELECT_NB_MB[ 160 ] = {
         16,      0,      0,      0,      0,     99,     66,     36,
         36,     34,     36,     34,     34,     34,     34,     83,
         69,     36,     52,     34,    116,    102,     70,     68,
@@ -143,7 +108,7 @@ static const opus_uint8 silk_NLSF_CB2_SELECT_NB_MB[ 160 ] = {
        171,    137,    139,    137,    155,    218,    219,    139
 };
 
-static const opus_uint8 silk_NLSF_CB2_iCDF_NB_MB[ 72 ] = {
+const opus_uint8 silk_NLSF_CB2_iCDF_NB_MB[ 72 ] = {
        255,    254,    253,    238,     14,      3,      2,      1,
          0,    255,    254,    252,    218,     35,      3,      2,
          1,      0,    255,    254,    250,    208,     59,      4,
@@ -155,7 +120,7 @@ static const opus_uint8 silk_NLSF_CB2_iCDF_NB_MB[ 72 ] = {
        254,    236,    173,     95,     37,      7,      1,      0
 };
 
-static const opus_uint8 silk_NLSF_CB2_BITS_NB_MB_Q5[ 72 ] = {
+const opus_uint8 silk_NLSF_CB2_BITS_NB_MB_Q5[ 72 ] = {
        255,    255,    255,    131,      6,    145,    255,    255,
        255,    255,    255,    236,     93,     15,     96,    255,
        255,    255,    255,    255,    194,     83,     25,     71,
@@ -167,13 +132,13 @@ static const opus_uint8 silk_NLSF_CB2_BITS_NB_MB_Q5[ 72 ] = {
        251,    123,     65,     55,     68,    100,    171,    255
 };
 
-static const opus_uint8 silk_NLSF_PRED_NB_MB_Q8[ 18 ] = {
+const opus_uint8 silk_NLSF_PRED_NB_MB_Q8[ 18 ] = {
        179,    138,    140,    148,    151,    149,    153,    151,
        163,    116,     67,     82,     59,     92,     72,    100,
         89,     92
 };
 
-static const opus_int16 silk_NLSF_DELTA_MIN_NB_MB_Q15[ 11 ] = {
+const opus_int16 silk_NLSF_DELTA_MIN_NB_MB_Q15[ 11 ] = {
        250,      3,      6,      3,      3,      3,      4,      3,
          3,      3,    461
 };
@@ -185,7 +150,6 @@ const silk_NLSF_CB_struct silk_NLSF_CB_NB_MB =
     SILK_FIX_CONST( 0.18, 16 ),
     SILK_FIX_CONST( 1.0 / 0.18, 6 ),
     silk_NLSF_CB1_NB_MB_Q8,
-    silk_NLSF_CB1_Wght_Q9,
     silk_NLSF_CB1_iCDF_NB_MB,
     silk_NLSF_PRED_NB_MB_Q8,
     silk_NLSF_CB2_SELECT_NB_MB,

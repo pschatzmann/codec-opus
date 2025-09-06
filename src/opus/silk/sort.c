@@ -8,11 +8,11 @@ this list of conditions and the following disclaimer.
 - Redistributions in binary form must reproduce the above copyright
 notice, this list of conditions and the following disclaimer in the
 documentation and/or other materials provided with the distribution.
-- Neither the name of Internet Society, IETF or IETF Trust, nor the
+- Neither the name of Internet Society, IETF or IETF Trust, nor the 
 names of specific contributors, may be used to endorse or promote
 products derived from this software without specific prior written
 permission.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
 ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
@@ -33,7 +33,7 @@ POSSIBILITY OF SUCH DAMAGE.
 /* Best case:  O(n)   for an already sorted array            */
 /* Worst case: O(n^2) for an inversely sorted array          */
 /*                                                           */
-/* Shell short:    https://en.wikipedia.org/wiki/Shell_sort  */
+/* Shell short:    http://en.wikipedia.org/wiki/Shell_sort   */
 
 #include "SigProc_FIX.h"
 
@@ -48,9 +48,9 @@ void silk_insertion_sort_increasing(
     opus_int        i, j;
 
     /* Safety checks */
-    celt_assert( K >  0 );
-    celt_assert( L >  0 );
-    celt_assert( L >= K );
+    silk_assert( K >  0 );
+    silk_assert( L >  0 );
+    silk_assert( L >= K );
 
     /* Write start indices in index vector */
     for( i = 0; i < K; i++ ) {
@@ -96,9 +96,9 @@ void silk_insertion_sort_decreasing_int16(
     opus_int value;
 
     /* Safety checks */
-    celt_assert( K >  0 );
-    celt_assert( L >  0 );
-    celt_assert( L >= K );
+    silk_assert( K >  0 );
+    silk_assert( L >  0 );
+    silk_assert( L >= K );
 
     /* Write start indices in index vector */
     for( i = 0; i < K; i++ ) {
@@ -141,7 +141,7 @@ void silk_insertion_sort_increasing_all_values_int16(
     opus_int    i, j;
 
     /* Safety checks */
-    celt_assert( L >  0 );
+    silk_assert( L >  0 );
 
     /* Sort vector elements by value, increasing order */
     for( i = 1; i < L; i++ ) {
