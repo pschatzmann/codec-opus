@@ -46,6 +46,32 @@ def copy_files(src, dest, exts=None, recursive=True, exclude_files=None):
         print(f"Copied files from {src} to {dest} (no subdirectories, filter={exts}, excluded={len(exclude_files)} files)")
 
 
+def patch_main_fix_header(dest_dir):
+    """Add missing include for silk_structs_FIX.h to main_FIX.h."""
+    main_fix_path = os.path.join(dest_dir, 'silk', 'fixed', 'main_FIX.h')
+    if os.path.exists(main_fix_path):
+        with open(main_fix_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Check if the include is already there
+        if 'silk_structs_FIX.h' not in content:
+            # Add the include after structs_FIX.h
+            new_content = content.replace(
+                '#include "structs_FIX.h"',
+                '#include "structs_FIX.h"\n#include "silk_structs_FIX.h"'
+            )
+            if new_content != content:
+                with open(main_fix_path, 'w', encoding='utf-8') as f:
+                    f.write(new_content)
+                print(f"Patched {main_fix_path} to include silk_structs_FIX.h")
+            else:
+                print(f"Warning: Could not patch {main_fix_path}")
+        else:
+            print(f"silk_structs_FIX.h already included in {main_fix_path}")
+    else:
+        print(f"Warning: {main_fix_path} not found")
+
+
 def copy_config_file(dest_dir):
     """Copy config.h from scripts/input to src/opus directory."""
     config_src = os.path.abspath(os.path.join(os.path.dirname(__file__), 'input/config.h'))
@@ -140,7 +166,7 @@ def setup_opus():
         'silk_find_LTP_FIX.c', 'silk_find_pitch_lags_FIX.c', 'silk_find_pred_coefs_FIX.c',
         'silk_noise_shape_analysis_FIX.c', 'silk_process_gains_FIX.c',
         'silk_regularize_correlations_FIX.c', 'silk_residual_energy16_FIX.c',
-        'silk_residual_energy_FIX.c'
+        'silk_residual_energy_FIX.c', 'silk_prefilter_FIX.c'
     }
 
     # Copy only .h files from include_src to dest_dir
@@ -186,6 +212,9 @@ def setup_opus():
     patch_include_after_guard(os.path.join(dest_dir, 'celt'), 'kiss_fft.h', '#include "opus/config.h"')
     patch_include_after_guard(os.path.join(dest_dir, 'silk'), 'SigProc_FIX.h', '#include "opus/config.h"')
     patch_include_after_guard(os.path.join(dest_dir), 'opus_types.h', '#include "opus/config.h"')
+    
+    # Patch main_FIX.h to include silk_structs_FIX.h
+    patch_main_fix_header(dest_dir)
 
 
 def patch_includes(dest_dir):
