@@ -1,5 +1,16 @@
 cmake_minimum_required(VERSION 3.16)
 
+if (DEFINED ESP_PLATFORM)
+  # idf component
+  idf_component_register(
+      SRC_DIRS src/opus src/opus/celt src/opus/silk src/opus/silk/fixed
+      INCLUDE_DIRS src
+  )
+
+  target_compile_options(${COMPONENT_LIB} PUBLIC -Wno-error -DHAVE_CONFIG_H -Wno-stringop-overread -O2)
+
+else()
+
 # set the project name
 project(arduino_libopus)
 
@@ -24,3 +35,4 @@ target_compile_options(arduino_libopus PRIVATE -DARDUINO -DHAVE_CONFIG_H -Wno-st
 # define location for header files
 target_include_directories(arduino_libopus PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src  )
 
+endif()

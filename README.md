@@ -1,5 +1,8 @@
 # The Opus Codec for Arduino
 
+[![Arduino Library](https://img.shields.io/badge/Arduino-Library-blue.svg)](https://www.arduino.cc/reference/en/libraries/)
+[![IDF Component](https://img.shields.io/badge/IDF-Component-blue.svg)](https://github.com/pschatzmann/codec-opus)
+
 Opus is a codec for interactive speech and audio transmission over the Internet.
 
 Opus can handle a wide range of interactive audio applications, including
